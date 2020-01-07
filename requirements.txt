@@ -1,0 +1,7 @@
+matplotlib
+numpy
+scipy
+cython
+wheel
+gym
+gym[atari]
