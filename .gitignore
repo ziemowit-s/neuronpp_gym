@@ -8,8 +8,8 @@ project/.DS_Store
 /ca2_diffusion/x86_64/
 x86_64/
 */*/x86_64/
-mods/*/x86_64/
-mods/x86_64/
+agents/utils/mods/*/x86_64/
+agents/utils/mods/x86_64/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
