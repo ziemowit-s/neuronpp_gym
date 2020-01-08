@@ -1,8 +1,5 @@
 import time
-
 import gym
-
-debug = True
 
 with gym.make('Pong-v0') as env:
     env.reset()

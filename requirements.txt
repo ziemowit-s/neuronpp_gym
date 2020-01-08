@@ -5,3 +5,4 @@ cython
 wheel
 gym
 gym[atari]
+git+https://github.com/ziemowit-s/neuronpp
