@@ -13,8 +13,8 @@ class Ebner2019AChDaSpineCell(Ebner2019AChDACell, SpineCell):
 
 
 class Ebner2019AChDaAgent(Agent):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, action_space, observation_space, reward_space):
+        super().__init__(action_space, observation_space, reward_space)
 
     def step(self, observation=None, reward=None):
-        pass
+        return self.action_space
