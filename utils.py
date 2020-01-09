@@ -35,12 +35,17 @@ def show(obs):
     plt.show()
 
 
-def prep_obs(obs, pivot=17, shape=(30, 30)):
+def prep_obs(obs, pivot=17, shape=(45, 45), show=False):
     obs = obs[:, :, 2]  # take only one RGB array
     obs = obs[34:193, :]  # remove boundaries and score
     obs = cv2.resize(obs, shape)
     obs[obs <= pivot] = 0
     obs[obs > pivot] = 1
+
+    if show:
+        plt.imshow(obs, vmin=0, vmax=1)
+        plt.show()
+
     obs = np.reshape(obs, [obs.shape[0] * obs.shape[1]])
     return obs
 
@@ -50,11 +55,8 @@ def get_env(name):
     env.reset()
 
     # Warmup evironment (required for 2 paddles to appear on the screen)
-    for _ in range(20):
-        env.step(0)
-
-    obs, *_ = env.step(env.action_space.sample())
+    for _ in range(21):
+        obs, *_ = env.step(0)
     obs = prep_obs(obs)
 
-    env.reset()
     return env, obs.size
