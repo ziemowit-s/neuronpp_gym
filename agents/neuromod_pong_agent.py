@@ -24,13 +24,13 @@ WEIGHT = 0.0035
 
 
 class NeuromodPongAgent(Agent):
-    def __init__(self, input_size, pyr_synapse, inh_synapse, sim_step=20):
+    def __init__(self, input_size, pyr_synapse, inh_synapse, max_hz, sim_step=20):
         super().__init__()
 
         self.synaptic_delay = 1
         self.sim_step = sim_step
-        self.max_stim_num = 1000/sim_step
-        self.max_hz = 300
+        self.max_stim_num = 1000 / sim_step
+        self.max_hz = max_hz
 
         # Prepare cells
         self.retina_cell = self._make_cell(name="ret", spine_num=input_size)
@@ -39,41 +39,44 @@ class NeuromodPongAgent(Agent):
 
         # Prepare input stims
         self.stim_cell = NetStimCell("obs")
-        self.nss = []
+        self.input_cons = []
         for i in range(input_size):
-            ns = self.stim_cell.add_netstim("ns[%s]" % i, start=0, number=0)
-            self.nss.append(ns)
-            self.retina_cell.add_netcons(source=ns, weight=WEIGHT, pp_type_name="Syn4PAChDa", sec_names="head[0][0]", delay=self.synaptic_delay)
+            nc = self.retina_cell.add_netcons(source=None, weight=WEIGHT,
+                                              pp_type_name="Syn4PAChDa",
+                                              sec_names="head[%s][0]" % i,
+                                              delay=self.synaptic_delay)
+            self.input_cons.append(nc[0])
 
         # records
-        self.retina_rec = Record(self.retina_cell.filter_point_processes(pp_type_name="Syn4PAChDa", sec_names="head[0][0]"), variables="w")
+        self.retina_rec = Record(self.retina_cell.filter_secs("soma"), locs=0.5, variables="v")
 
         # init, run and warmup
         h.finitialize(-70 * mV)
         self.sim = RunSim(warmup=200)
-
+        print("Agent setup done")
+        
     def step(self, observation=None, reward=None):
-        print("agent step..")
-        for i, o in enumerate(observation):
-            ns = self.nss[i]
-            # make input stim
-            # start, number, interval, noise
-            ns.start = self.sim.time+10
+        for i, pixel_value in enumerate(observation):
+            conn = self.input_cons[i]
+            stim_num = int(round((pixel_value * self.max_hz)/self.max_stim_num))
+            stim_int = self.sim_step/stim_num if stim_num > 0 else 0
 
-            # max 300 Hz
-            stim_num = 20  # (o*self.max_hz)/self.max_stim_num
-            stim_int = 1  # self.sim_step/stim_num
-            ns.number = stim_num
-            ns.interval = stim_int
-            ns.noise = 0  # 0.2
+            # stim single synapse
+            next_event = self.sim.time + stim_int
+            for e in range(stim_num):
+                print(i, 'pixe_val:', pixel_value, 'stim number:', stim_num, "interval:", stim_int)
+                conn.event(next_event)
+                next_event += stim_int
 
+        print("running sim ...")
         self.sim.run(self.sim_step)
         return 0
 
-    def _make_cell(self, name, spine_num=0):
+    @staticmethod
+    def _make_cell(name, spine_num=0):
         cell = Ebner2019AChDaSpineCell(name)
-        cell.add_sec("soma", diam=10, l=10, nseg=20)
-        cell.add_sec("dend", diam=4, l=100, nseg=100)
+        cell.add_sec("soma", diam=10, l=10, nseg=10)
+        cell.add_sec("dend", diam=4, l=50, nseg=10)
         cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
 
         print('spine adding')
