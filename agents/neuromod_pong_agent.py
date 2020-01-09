@@ -6,7 +6,7 @@ from neuronpp.cells.core.netstim_cell import NetStimCell
 
 from neuronpp.cells.core.spine_cell import SpineCell
 from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
-from neuronpp.utils.Record import Record
+from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
 
 from agents.agent import Agent

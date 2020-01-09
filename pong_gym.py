@@ -53,7 +53,7 @@ def prep_obs(obs, pivot=17):
 
 with gym.make('Pong-v0') as env:
     env.reset()
-    agent = NeuromodPongAgent(input_size=100, pyr_synapse=100, inh_synapse=100)
+    #agent = NeuromodPongAgent(input_size=100, pyr_synapse=100, inh_synapse=100)
 
     # Warmup env
     for i in range(21):
@@ -61,7 +61,8 @@ with gym.make('Pong-v0') as env:
 
     # Play
     action = 0
-    for i in range(1):
+    for i in range(1000):
+        env.render(mode='human')
         obs, reward, done, info = env.step(env.action_space.sample())
         obs = prep_obs(obs, pivot=17)  # 2500 pixels
         print(obs.size)
@@ -70,8 +71,8 @@ with gym.make('Pong-v0') as env:
             print('DONE:', reward, done)
             env.reset()
 
-        action = agent.step(observation=obs[:100], reward=reward)
+        #action = agent.step(observation=obs[:100], reward=reward)
         time.sleep(0.01)
 
-    agent.retina_rec.plot()
+    #agent.retina_rec.plot()
     plt.show()
