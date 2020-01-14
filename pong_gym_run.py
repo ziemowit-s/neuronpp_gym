@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from agents.neuromod_pong_agent import NeuromodPongAgent
+from agents.neuro_mod_agent import NeuroModAgent
 from utils import get_env, prep_obs
 
 
@@ -10,7 +10,7 @@ ENV_STEP = 200
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0')
-    agent = NeuromodPongAgent(input_size=input_size, pyr_synapse=100, inh_synapse=100, sim_step=20, max_hz=300)
+    agent = NeuroModAgent(input_size=input_size, pyr_synapse=100, inh_synapse=100, sim_step=20, max_hz=300)
 
     action = 0
     for i in range(ENV_STEP):

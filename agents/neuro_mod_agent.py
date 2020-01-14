@@ -21,7 +21,10 @@ class Ebner2019AChDaSpineCell(Ebner2019AChDACell, SpineCell):
 WEIGHT = 0.0035
 
 
-class NeuromodPongAgent(Agent):
+class NeuroModAgent(Agent):
+    """
+    Neuromodulated agent for GYM-like environment
+    """
     def __init__(self, input_size, pyr_synapse, inh_synapse, max_hz, sim_step=20, finalize_step=5, warmup=200):
         super().__init__()
 
@@ -38,7 +41,7 @@ class NeuromodPongAgent(Agent):
         self.inhibitory_cell = self._make_cell(name="inh", spine_num=inh_synapse)
 
         # Input
-        self._prepare_input_stim(input_size, synapse_type="Syn4PAChDa")
+        self._prepare_input_stimulations(input_size, synapse_type="Syn4PAChDa")
 
         # records
         self.retina_rec = Record(self.retina_cell.filter_secs("soma"), locs=0.5, variables="v")
@@ -48,31 +51,41 @@ class NeuromodPongAgent(Agent):
         self.sim = RunSim(warmup=warmup)
         print("Agent setup done")
 
-    def _prepare_input_stim(self, input_size, synapse_type):
+    def step(self, observation=None, reward=None):
+        # Prepare spikes
+        spiked_pixels = 0
+        for pixel_value, conn in zip(observation, self.input_connections):
+            is_spiked = self._make_stim(input_value=pixel_value, conn=conn)
+            spiked_pixels += is_spiked
+        print('pixel which spiks:', spiked_pixels, 'obs>0:', np.sum(observation > 0))
+
+        # Run
+        self.sim.run(self.sim_step+self.finalize_step)
+        return 0
+
+    def _make_stim(self, input_value, conn):
+        is_spiked = False
+        stim_num, stim_int = self._get_stim(input_value=input_value)
+        if stim_num > 0:
+            is_spiked = True
+        next_event = self.sim.time + stim_int
+        for e in range(stim_num):
+            conn.event(next_event)
+            next_event += stim_int
+        return is_spiked
+
+    def _get_stim(self, input_value):
+        stim_num = int(round((input_value * self.max_hz) / self.max_stim_num))
+        stim_int = self.sim_step / stim_num if stim_num > 0 else 0
+        return stim_num, stim_int
+
+    def _prepare_input_stimulations(self, input_size, synapse_type):
         for i in range(input_size):
             nc = self.retina_cell.add_netcons(source=None, weight=WEIGHT,
                                               pp_type_name=synapse_type,
                                               sec_names="head[%s][0]" % i,
                                               delay=self.synaptic_delay)
             self.input_connections.append(nc[0])
-
-    def step(self, observation=None, reward=None):
-        pixel_which_spikes = 0
-        for pixel_value, conn in zip(observation, self.input_connections):
-
-            stim_num = int(round((pixel_value * self.max_hz)/self.max_stim_num))
-            stim_int = self.sim_step/stim_num if stim_num > 0 else 0
-            if stim_num > 0:
-                pixel_which_spikes += 1
-            # stim single synapse
-            next_event = self.sim.time + stim_int
-            for e in range(stim_num):
-                conn.event(next_event)
-                next_event += stim_int
-
-        print('pixel which spiks:', pixel_which_spikes, 'obs>0:', np.sum(observation > 0))
-        self.sim.run(self.sim_step+self.finalize_step)
-        return 0
 
     @staticmethod
     def _make_cell(name, spine_num=0):
