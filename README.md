@@ -31,7 +31,11 @@ Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
 ### pong_gym_run.py
 
 * compile mods:
-  * go to neuronpp_gym main folder
+  * go to neuronpp_gym main folder and compile following mod folders in agents/utils/mods:
+    * 4p_ach_da_syns
+    * ebner2019
+    * neuron_commons
+    
     ```bash
     python compile_mod.py -source agents/utils/mods/4p_ach_da_syns agents/utils/mods/ebner2019 agents/utils/mods/neuron_commons -target .
     ``` 
