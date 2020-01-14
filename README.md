@@ -1,7 +1,10 @@
+Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
+
 ## Prerequisites
 
 * Install requirements.txt
 * Install NEURON
+
 * Install NEURON++ Python library
     ```bash
     pip install -U git+https://github.com/ziemowit-s/neuronpp

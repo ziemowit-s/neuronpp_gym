@@ -14,6 +14,7 @@ if __name__ == '__main__':
 
     action = 0
     for i in range(ENV_STEP):
+
         obs, reward, done, info = env.step(env.action_space.sample())
         obs = prep_obs(obs, show=True)
 
