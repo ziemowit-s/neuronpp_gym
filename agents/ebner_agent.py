@@ -11,7 +11,6 @@ WEIGHT = 0.0035
 class EbnerAgent(BasicAgent):
     def __init__(self, input_size, max_hz, stepsize=20, finalize_step=5, warmup=200):
         super().__init__(input_size, max_hz, stepsize, finalize_step, warmup)
-        self.output_rec = Record(self.input_cell.filter_secs("soma"), locs=0.5, variables="v")
 
     def step(self, observation=None, reward=None):
         spiked_pixels = 0
@@ -28,8 +27,7 @@ class EbnerAgent(BasicAgent):
 
         # Read actions
         output = self.output_rec.recs['v'][0][1].as_numpy()
-        print(output)
-        return 0
+        return output
 
     def _prepare_cell(self, input_size, delay=1):
         # Prepare cell
@@ -50,6 +48,8 @@ class EbnerAgent(BasicAgent):
         # Add mechanisms
         self.input_cell.make_soma_mechanisms()
         self.input_cell.make_apical_mechanisms(sections='dend head neck')
+
+        self.output_rec = Record(self.input_cell.filter_secs(name="soma"), locs=0.5, variables="v")
 
         return list(zip(syn_4p, syn_ach, syn_da))
 

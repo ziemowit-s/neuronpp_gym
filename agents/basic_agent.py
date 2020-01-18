@@ -1,6 +1,7 @@
 import abc
 
 import numpy as np
+from neuron import h
 from neuronpp.utils.run_sim import RunSim
 
 from agents.agent import Agent
@@ -22,6 +23,8 @@ class BasicAgent(Agent):
         self.finalize_step = finalize_step
 
         self.inputs = self._prepare_cell(input_size)
+        self.time_vec = h.Vector().record(h._ref_t)
+
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
         print("Agent setup done")
