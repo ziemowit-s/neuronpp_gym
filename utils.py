@@ -79,14 +79,20 @@ def prepare_pong_observation(obs, ratio, show=False):
     return obs
 
 
-def get_env(name, ratio):
-    env = gym.make(name)
+def reset(env, ratio):
     env.reset()
-
     # Warmup evironment (required for 2 paddles to appear on the screen)
     obs = None
     for _ in range(21):
         obs, *_ = env.step(0)
     obs = prepare_pong_observation(obs, ratio)
 
-    return env, obs.size
+    return obs.size
+
+
+def get_env(name, ratio):
+    env = gym.make(name)
+    return env, reset(env, ratio)
+
+
+

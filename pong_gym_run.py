@@ -3,10 +3,8 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 from agents.ebner_agent import EbnerAgent
-from utils import get_env, prepare_pong_observation
+from utils import get_env, prepare_pong_observation, reset
 
-
-ENV_STEP = 20000
 SCREEN_RATIO = 0.1
 
 
@@ -33,7 +31,7 @@ if __name__ == '__main__':
     up_moves = np.array([])
     down_moves = np.array([])
     action = 0
-    for i in range(ENV_STEP):
+    while True:
 
         env.render()
         obs, reward, done, info = env.step(action)
@@ -42,7 +40,9 @@ if __name__ == '__main__':
 
         if done or reward != 0:
             print('reward:', reward, "done:", done)
-            env.reset()
+
+        if done:
+            reset(env, SCREEN_RATIO)
 
         curr_time = time.time()*100
         if up_moves.size > 0:

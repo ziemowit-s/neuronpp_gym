@@ -42,8 +42,6 @@ class EbnerAgent:
                     is_spiked = self._make_stim(input_value=input_value, synapse=synapse, reward=reward)
                     spiked_pixels += is_spiked
 
-        print('pixel which spiks:', spiked_pixels, 'obs>0:', np.sum(observation > 0))
-
         # Run
         self.sim.run(self.stepsize)
 
@@ -62,32 +60,38 @@ class EbnerAgent:
             moves.append(times_of_move)
         return moves
 
+    def _make_synapse(self, cell, input_size, delay, source=None):
+        # make synapses with spines
+        syn_4p, heads = cell.make_spine_with_synapse(source=source, number=input_size, weight=WEIGHT, mod_name="Syn4PAChDa",
+                                                     delay=delay, **cell.params_4p_syn)
+
+        syn_ach = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynACh", sec=heads, delay=delay, **cell.params_ach)
+        syn_da = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynDa", sec=heads, delay=delay, **cell.params_da)
+        cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
+        input_syns = list(zip(syn_4p, syn_ach, syn_da))
+        return input_syns
+
     def _build_cells(self, input_size, delay=1):
-        
+
         def single_cell():
             # Prepare cell
             cell = Ebner2019AChDACell("input_cell")
             cell.make_sec("soma", diam=10, l=10, nseg=10)
             cell.make_sec("dend", diam=4, l=50, nseg=10)
             cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
-    
-            # make synapses with spines
-            syn_4p, heads = cell.make_spine_with_synapse(source=None, number=input_size, weight=WEIGHT, mod_name="Syn4PAChDa",
-                                                              delay=delay, **cell.params_4p_syn)
-    
-            syn_ach = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynACh", sec=heads, delay=delay, **cell.params_ach)
-            syn_da = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynDa", sec=heads, delay=delay, **cell.params_da)
-            cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
-    
+
+            input_syns = self._make_synapse(cell, input_size=input_size, delay=delay, source=None)
+
             # Add mechanisms
             cell.make_soma_mechanisms()
             cell.make_apical_mechanisms(sections='dend head neck')
 
-            input_syns = list(zip(syn_4p, syn_ach, syn_da))
             return cell, input_syns
 
         self.input_cell1, self.input_synapses1 = single_cell()
         self.input_cell2, self.input_synapses2 = single_cell()
+
+        input_syns = self._make_synapse(self.input_cell2, input_size=input_size, delay=delay, source=self.input_cell1.filter_secs("soma"))
 
         # Make output
         self.make_output(self.input_cell1.filter_secs("soma") + self.input_cell2.filter_secs("soma"))
