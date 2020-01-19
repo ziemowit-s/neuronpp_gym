@@ -1,6 +1,7 @@
 import numpy as np
 from neuron import h
 import matplotlib.pyplot as plt
+from neuron.units import mV
 from neuronpp.cells.cell import Cell
 
 from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
@@ -35,12 +36,22 @@ class EbnerAgent:
         """
 
         for iss in [self.input_synapses1, self.input_synapses2]:
-            spiked_pixels = 0
             # Observe
             if observation is not None or reward is not None:
                 for input_value, synapse in zip(observation, iss):
-                    is_spiked = self._make_stim(input_value=input_value, synapse=synapse, reward=reward)
-                    spiked_pixels += is_spiked
+                    self._make_stim(input_value=input_value, synapse=synapse, reward=reward)
+
+                    # reward inhibitory connection between retina cells
+                    if reward > 0:
+                        for s in self.c1_c2:
+                            s[2].make_event(1)
+                        for s in self.c2_c1:
+                            s[2].make_event(1)
+                    if reward < 0:
+                        for s in self.c1_c2:
+                            s[1].make_event(1)
+                        for s in self.c2_c1:
+                            s[1].make_event(1)
 
         # Run
         self.sim.run(self.stepsize)
@@ -60,10 +71,11 @@ class EbnerAgent:
             moves.append(times_of_move)
         return moves
 
-    def _make_synapse(self, cell, input_size, delay, source=None):
+    @staticmethod
+    def _make_synapse(cell, input_size, delay, source=None, source_loc=None):
         # make synapses with spines
         syn_4p, heads = cell.make_spine_with_synapse(source=source, number=input_size, weight=WEIGHT, mod_name="Syn4PAChDa",
-                                                     delay=delay, **cell.params_4p_syn)
+                                                     delay=delay, **cell.params_4p_syn, source_loc=source_loc)
 
         syn_ach = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynACh", sec=heads, delay=delay, **cell.params_ach)
         syn_da = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynDa", sec=heads, delay=delay, **cell.params_da)
@@ -77,7 +89,7 @@ class EbnerAgent:
             # Prepare cell
             cell = Ebner2019AChDACell("input_cell")
             cell.make_sec("soma", diam=10, l=10, nseg=10)
-            cell.make_sec("dend", diam=4, l=50, nseg=10)
+            cell.make_sec("dend", diam=4, l=100, nseg=50)
             cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
 
             input_syns = self._make_synapse(cell, input_size=input_size, delay=delay, source=None)
@@ -88,13 +100,22 @@ class EbnerAgent:
 
             return cell, input_syns
 
-        self.input_cell1, self.input_synapses1 = single_cell()
+        self.input_cell, self.input_synapses1 = single_cell()
         self.input_cell2, self.input_synapses2 = single_cell()
 
-        input_syns = self._make_synapse(self.input_cell2, input_size=input_size, delay=delay, source=self.input_cell1.filter_secs("soma"))
+        # Inhibitory synapses
+        self.c1_c2 = self._make_synapse(self.input_cell2, input_size=5, delay=delay, source=self.input_cell.filter_secs("soma")[0],
+                                        source_loc=0.5)
+        for s in self.c1_c2:
+            s[0].e=-80
+
+        self.c2_c1 = self._make_synapse(self.input_cell, input_size=5, delay=delay, source=self.input_cell2.filter_secs("soma")[0],
+                                        source_loc=0.5)
+        for s in self.c2_c1:
+            s[0].e = -80
 
         # Make output
-        self.make_output(self.input_cell1.filter_secs("soma") + self.input_cell2.filter_secs("soma"))
+        self.make_output(self.input_cell.filter_secs("soma") + self.input_cell2.filter_secs("soma"))
 
     def make_output(self, secs):
         """
