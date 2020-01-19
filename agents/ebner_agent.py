@@ -26,7 +26,7 @@ class EbnerAgent:
 
         :param observation:
         :param reward:
-        :return: 
+        :return:
             Return actions as numpy array of time of spikes in ms.
         """
         spiked_pixels = 0
@@ -39,10 +39,18 @@ class EbnerAgent:
         print('pixel which spiks:', spiked_pixels, 'obs>0:', np.sum(observation > 0))
 
         # Run
-        self.sim.run(self.stepsize + self.finalize_step)
+        self.last_runtime = self.stepsize + self.finalize_step
+        self.sim.run(self.last_runtime)
 
         # Return actions as time of spikes in ms
+        time_of_spikes = self.get_time_of_spikes(as_global_time=False)
+        return time_of_spikes
+
+    def get_time_of_spikes(self, as_global_time=True):
         time_of_spikes = self.cell.get_spikes()
+        if not as_global_time:
+            min_time = self.sim.t - self.last_runtime
+            time_of_spikes = np.array([i for i in time_of_spikes if i >= min_time])
         return time_of_spikes
 
     def _build_cells(self, input_size, delay=1):
