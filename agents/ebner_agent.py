@@ -1,8 +1,11 @@
 import numpy as np
 from neuron import h
+from neuronpp.cells.cell import Cell
 
 from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
 from neuronpp.utils.run_sim import RunSim
+from nrn import Segment
+from scipy.integrate import solve_ivp
 
 WEIGHT = 0.0035
 
@@ -19,6 +22,8 @@ class EbnerAgent:
 
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
+
+        self.output_cells = []
         print("Agent setup done")
 
     def step(self, observation=None, reward=None):
@@ -39,19 +44,22 @@ class EbnerAgent:
         print('pixel which spiks:', spiked_pixels, 'obs>0:', np.sum(observation > 0))
 
         # Run
-        self.last_runtime = self.stepsize + self.finalize_step
-        self.sim.run(self.last_runtime)
+        self.sim.run(self.stepsize + self.finalize_step)
 
         # Return actions as time of spikes in ms
-        time_of_spikes = self.get_time_of_spikes(as_global_time=False)
-        return time_of_spikes
+        moves = self.get_time_of_spikes(as_global_time=False)
+        return moves
 
     def get_time_of_spikes(self, as_global_time=True):
-        time_of_spikes = self.cell.get_spikes()
-        if not as_global_time:
-            min_time = self.sim.t - self.last_runtime
-            time_of_spikes = np.array([i for i in time_of_spikes if i >= min_time])
-        return time_of_spikes
+        moves = []
+        for o in self.output_cells:
+            times_of_move = o.get_spikes()
+            if not as_global_time:
+                min_time = self.sim.t - self.last_runtime
+                times_of_move = np.array([i for i in times_of_move if i >= min_time])
+                times_of_move -= min_time
+            moves.append(times_of_move)
+        return moves
 
     def _build_cells(self, input_size, delay=1):
         # Prepare cell
@@ -67,15 +75,29 @@ class EbnerAgent:
         syn_ach = self.cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynACh", sec=heads, delay=delay, **self.cell.params_ach)
         syn_da = self.cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynDa", sec=heads, delay=delay, **self.cell.params_da)
         self.cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
-
         # Add mechanisms
         self.cell.make_soma_mechanisms()
         self.cell.make_apical_mechanisms(sections='dend head neck')
 
-        self.cell.make_spike_detector(sec="soma", loc=0.5)
+        self.make_output(sources=[self.cell.filter_secs("soma")[0](0.5)])
 
         input_synapses = list(zip(syn_4p, syn_ach, syn_da))
         return input_synapses
+
+    def make_output(self, sources):
+        """
+        Make output for agent's motor/muscle
+        :param sources:
+        :return:
+        """
+        for i, segment in enumerate(sources):
+            c = Cell("output"+i)
+            s = c.make_sec("soma", diam=1, l=1, nseg=1)
+            c.insert("hh")
+            c.insert("pas")
+            c.make_sypanses(segment, weight=0.1, mod_name="ExpSyn", sec=s, loc=0.5, tau=10)
+            c.make_spike_detector()
+            self.output_cells.append(c)
 
     def _make_stim(self, input_value, synapse):
         """

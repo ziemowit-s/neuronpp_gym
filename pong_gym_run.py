@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation
 
@@ -24,11 +23,9 @@ if __name__ == '__main__':
     agent = EbnerAgent(input_size=input_size, max_hz=300, stepsize=100, finalize_step=5, warmup=200)
     print('input_size', input_size)
 
-    action = 0
     for i in range(ENV_STEP):
 
         env.render()
-
         obs, reward, done, info = env.step(env.action_space.sample())
         obs = prepare_pong_observation(obs, ratio=SCREEN_RATIO, show=False)
 
@@ -36,9 +33,10 @@ if __name__ == '__main__':
             print('reward:', reward, "done:", done)
             env.reset()
 
-        time_of_spikes = agent.step(observation=obs, reward=reward)
+        # left motor
+        motor_moves = agent.step(observation=obs, reward=reward)
 
-        agent.cell.plot_spikes()
-        plt.pause(1.0)
-        plt.close()
+        #agent.cell.plot_spikes()
+        #plt.pause(1.0)
+        #plt.close()
     env.close()
