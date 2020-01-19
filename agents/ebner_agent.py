@@ -17,7 +17,7 @@ class EbnerAgent:
         self.max_hz = max_hz
         self.output_cells = []
 
-        self.input_synapses = self._build_cells(input_size)
+        self._build_cells(input_size)
         self.time_vec = h.Vector().record(h._ref_t)
 
         # init and warmup
@@ -33,12 +33,14 @@ class EbnerAgent:
         :return:
             Return actions as numpy array of time of spikes in ms.
         """
-        spiked_pixels = 0
-        # Observe
-        if observation is not None or reward is not None:
-            for input_value, synapse in zip(observation, self.input_synapses):
-                is_spiked = self._make_stim(input_value=input_value, synapse=synapse)
-                spiked_pixels += is_spiked
+
+        for iss in [self.input_synapses1, self.input_synapses2]:
+            spiked_pixels = 0
+            # Observe
+            if observation is not None or reward is not None:
+                for input_value, synapse in zip(observation, iss):
+                    is_spiked = self._make_stim(input_value=input_value, synapse=synapse, reward=reward)
+                    spiked_pixels += is_spiked
 
         print('pixel which spiks:', spiked_pixels, 'obs>0:', np.sum(observation > 0))
 
@@ -61,30 +63,34 @@ class EbnerAgent:
         return moves
 
     def _build_cells(self, input_size, delay=1):
-        # Prepare cell
-        self.cell = Ebner2019AChDACell("input_cell")
-        self.cell.make_sec("soma", diam=10, l=10, nseg=10)
-        self.cell.make_sec("dend", diam=4, l=50, nseg=10)
-        self.cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
+        
+        def single_cell():
+            # Prepare cell
+            cell = Ebner2019AChDACell("input_cell")
+            cell.make_sec("soma", diam=10, l=10, nseg=10)
+            cell.make_sec("dend", diam=4, l=50, nseg=10)
+            cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
+    
+            # make synapses with spines
+            syn_4p, heads = cell.make_spine_with_synapse(source=None, number=input_size, weight=WEIGHT, mod_name="Syn4PAChDa",
+                                                              delay=delay, **cell.params_4p_syn)
+    
+            syn_ach = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynACh", sec=heads, delay=delay, **cell.params_ach)
+            syn_da = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynDa", sec=heads, delay=delay, **cell.params_da)
+            cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
+    
+            # Add mechanisms
+            cell.make_soma_mechanisms()
+            cell.make_apical_mechanisms(sections='dend head neck')
 
-        # make synapses with spines
-        syn_4p, heads = self.cell.make_spine_with_synapse(source=None, number=input_size, weight=WEIGHT, mod_name="Syn4PAChDa",
-                                                          delay=delay, **self.cell.params_4p_syn)
+            input_syns = list(zip(syn_4p, syn_ach, syn_da))
+            return cell, input_syns
 
-        syn_ach = self.cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynACh", sec=heads, delay=delay, **self.cell.params_ach)
-        syn_da = self.cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynDa", sec=heads, delay=delay, **self.cell.params_da)
-        self.cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
-
-        # Add mechanisms
-        self.cell.make_soma_mechanisms()
-        self.cell.make_apical_mechanisms(sections='dend head neck')
+        self.input_cell1, self.input_synapses1 = single_cell()
+        self.input_cell2, self.input_synapses2 = single_cell()
 
         # Make output
-        self.cell.make_spike_detector()
-        self.make_output(self.cell.filter_secs("soma"))
-
-        input_synapses = list(zip(syn_4p, syn_ach, syn_da))
-        return input_synapses
+        self.make_output(self.input_cell1.filter_secs("soma") + self.input_cell2.filter_secs("soma"))
 
     def make_output(self, secs):
         """
@@ -99,7 +105,7 @@ class EbnerAgent:
             c.make_spike_detector()
             self.output_cells.append(c)
 
-    def _make_stim(self, input_value, synapse):
+    def _make_stim(self, input_value, synapse, reward):
         """
         :param input_value:
         :param synapse:
@@ -112,11 +118,16 @@ class EbnerAgent:
         next_event = interval
         for e in range(stim_num):
             syn4p = synapse[0]
-            synach = synapse[1]
-            synda = synapse[2]
-
             syn4p.make_event(next_event)
             next_event += interval
+
+        synach = synapse[1]
+        synda = synapse[2]
+        if reward < 0:
+            synach.make_event(1)
+        if reward > 0:
+            synda.make_event(1)
+
         return stim_num > 0
 
     def get_single_stim(self, input_value):

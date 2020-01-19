@@ -31,6 +31,7 @@ if __name__ == '__main__':
     move_time = 0
     agent_observe = True
     up_moves = np.array([])
+    down_moves = np.array([])
     action = 0
     for i in range(ENV_STEP):
 
@@ -49,9 +50,18 @@ if __name__ == '__main__':
                 action = 2
                 up_moves = up_moves[1:]
 
+        if down_moves.size > 0:
+            if (curr_time - move_time) >= down_moves[0]:
+                if action == 2:
+                    action = 0
+                else:
+                    action = 3
+                down_moves = down_moves[1:]
+
         if ((curr_time - move_time)) > AGENT_STEPSIZE:
             moves = agent.step(observation=obs, reward=reward)
             up_moves = moves[0]
+            down_moves = moves[1]
             move_time = time.time()*100
         time.sleep(0.05)
         #agent.cell.plot_spikes()
