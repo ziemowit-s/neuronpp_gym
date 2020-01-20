@@ -41,18 +41,6 @@ class EbnerAgent:
                 for input_value, synapse in zip(observation, iss):
                     self._make_stim(input_value=input_value, synapse=synapse, reward=reward)
 
-                    # reward inhibitory connection between retina cells
-                    if reward > 0:
-                        for s in self.c1_c2:
-                            s[2].make_event(1)
-                        for s in self.c2_c1:
-                            s[2].make_event(1)
-                    if reward < 0:
-                        for s in self.c1_c2:
-                            s[1].make_event(1)
-                        for s in self.c2_c1:
-                            s[1].make_event(1)
-
         # Run
         self.sim.run(self.stepsize)
 
@@ -126,7 +114,7 @@ class EbnerAgent:
             s = c.make_sec("soma", diam=10, l=10, nseg=1)
             c.insert("hh")
             c.insert("pas")
-            c.make_sypanses(source=sec, weight=0.004, mod_name="ExpSyn", sec=[s], source_loc=0.5, target_loc=0.5, threshold=0, e=40, tau=2)
+            c.make_sypanses(source=sec, weight=0.004, mod_name="ExpSyn", sec=[s], source_loc=0.5, target_loc=0.5, threshold=0, e=40, tau=4)
             c.make_spike_detector()
             self.output_cells.append(c)
 

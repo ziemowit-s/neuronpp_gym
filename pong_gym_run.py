@@ -53,7 +53,7 @@ if __name__ == '__main__':
         if down_moves.size > 0:
             if (curr_time - move_time) >= down_moves[0]:
                 if action == 2:
-                    action = 0
+                    action = np.random.randint(2,4)
                 else:
                     action = 3
                 down_moves = down_moves[1:]

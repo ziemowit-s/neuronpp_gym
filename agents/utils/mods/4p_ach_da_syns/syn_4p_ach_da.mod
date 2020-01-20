@@ -265,8 +265,8 @@ ENDCOMMENT
     : DA acts on LTP_post; ACh has no effect on LTP_post
 
     E = D * T
-    LTD_pre  = - A_LTD_pre  * (E * Eta) * ACh * (last_max_w_Da-Da)/last_max_w_Da : Eta only for ACh/Da
-  	LTP_post =   A_LTP_post * K * Da * Eta : Eta for all params
+    LTD_pre  = - A_LTD_pre  * (E + ACh * (last_max_w_Da-Da)/last_max_w_Da * Eta) : Eta only for ACh/Da
+  	LTP_post =   A_LTP_post * (K + Da) * Eta : Eta for all params
 
   	: Update weights
   	w_pre = w_pre + LTD_pre + LTP_pre
