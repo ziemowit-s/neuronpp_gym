@@ -7,17 +7,7 @@ from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.1
 
-
-def plot_spikes(v, agent, title=None, ax=None):
-    if title:
-        ax.set_title(title)
-
-    ax.plot(agent.time_vec, v)
-    ax.set_xlabel("time (ms)")
-    ax.set_ylabel("voltage")
-    plt.pause(0.0001)
-
-AGENT_STEPSIZE = 10
+AGENT_STEPSIZE = 50
 
 
 if __name__ == '__main__':
@@ -63,8 +53,11 @@ if __name__ == '__main__':
             up_moves = moves[0]
             down_moves = moves[1]
             move_time = time.time()*100
+            print('up_move:', up_moves, 'down_move:', down_moves)
         time.sleep(0.05)
-        #agent.cell.plot_spikes()
-        #plt.pause(1.0)
+
+        #agent.rec.plot()
+        #plt.pause(2)
         #plt.close()
+
     env.close()
