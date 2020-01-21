@@ -42,11 +42,19 @@ class EbnerAgent:
             Return actions as numpy array of time of spikes in ms.
         """
 
-        for iss in [self.input_synapses1, self.input_synapses2]:
-            # Observe
-            if observation is not None or reward is not None:
+        if observation is not None:
+            for iss in [self.input_synapses1, self.input_synapses2]:
                 for input_value, synapse in zip(observation, iss):
                     self._make_stim(input_value=input_value, synapse=synapse, reward=reward)
+
+        if reward > 0:
+            da_syns = self.input_cell1.filter_synapse(mod_name="Da") + self.input_cell2.filter_synapse(mod_name="Da")
+            for s in da_syns:
+                s.make_event(1)
+        elif reward < 0:
+            ach_syns = self.input_cell1.filter_synapse(mod_name="ACh") + self.input_cell2.filter_synapse(mod_name="ACh")
+            for s in ach_syns:
+                s.make_event(1)
 
         # Run
         self.sim.run(self.stepsize)
@@ -83,8 +91,8 @@ class EbnerAgent:
         def single_cell():
             # Prepare cell
             cell = Ebner2019AChDACell("input_cell", compile_paths="agents/utils/mods/ebner2019 agents/utils/mods/4p_ach_da_syns agents/utils/mods/neuron_commons")
-            cell.make_sec("soma", diam=20, l=20, nseg=100)
-            cell.make_sec("dend", diam=8, l=500, nseg=1000)
+            cell.make_sec("soma", diam=20, l=20, nseg=10)
+            cell.make_sec("dend", diam=8, l=500, nseg=100)
             cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
 
             input_syns = self._make_synapse(cell, input_size=input_size, delay=delay, target=None)
@@ -114,12 +122,12 @@ class EbnerAgent:
                 s[0].e = -80
 
         def inhibition_internal():
-            self.c1_c2 = self._make_synapse(self.input_cell1, input_size=5, delay=delay, target=self.input_cell2.filter_secs("dend")[0],
+            self.c1_c2 = self._make_synapse(self.input_cell1, input_size=1, delay=delay, target=self.input_cell2.filter_secs("soma")[0],
                                             source_loc=0.5)
             for s in self.c1_c2:
                 s[0].e = -60
 
-            self.c2_c1 = self._make_synapse(self.input_cell2, input_size=1, delay=delay, target=self.input_cell1.filter_secs("dend")[0],
+            self.c2_c1 = self._make_synapse(self.input_cell2, input_size=1, delay=delay, target=self.input_cell1.filter_secs("soma")[0],
                                             source_loc=0.5)
             for s in self.c2_c1:
                 s[0].e = -60
@@ -157,13 +165,6 @@ class EbnerAgent:
             syn4p = synapse[0]
             syn4p.make_event(next_event)
             next_event += interval
-
-        synach = synapse[1]
-        synda = synapse[2]
-        if reward < 0:
-            synach.make_event(1)
-        if reward > 0:
-            synda.make_event(1)
 
         return stim_num > 0
 

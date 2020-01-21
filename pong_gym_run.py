@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
-SCREEN_RATIO = 0.1
+SCREEN_RATIO = 0.05
 
-AGENT_STEPSIZE = 50
+AGENT_STEPSIZE = 100
+PLOT_PAUSE = 2
 
 
 if __name__ == '__main__':
@@ -52,12 +53,11 @@ if __name__ == '__main__':
             moves = agent.step(observation=obs, reward=reward)
             up_moves = moves[0]
             down_moves = moves[1]
+            agent.rec.plot()
+            plt.pause(PLOT_PAUSE)
+            plt.close()
             move_time = time.time()*100
             print('up_move:', up_moves, 'down_move:', down_moves)
         time.sleep(0.05)
-
-        #agent.rec.plot()
-        #plt.pause(2)
-        #plt.close()
 
     env.close()
