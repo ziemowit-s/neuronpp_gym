@@ -14,7 +14,7 @@ AGENT_STEPSIZE = 100
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = EbnerAgent(input_size=input_size, max_hz=300, stepsize=AGENT_STEPSIZE, warmup=200)
+    agent = EbnerAgent(input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE, warmup=200)
     print('input_size', input_size)
 
     move_time = 0
@@ -55,9 +55,9 @@ if __name__ == '__main__':
             up_moves = moves[0]
             down_moves = moves[1]
 
-            agent.rec.plot()
-            plt.pause(PLOT_PAUSE)
-            plt.close()
+            #agent.rec.plot()
+            #plt.pause(PLOT_PAUSE)
+            #plt.close()
 
             move_time = time.time()*100
             print('up_move:', up_moves, 'down_move:', down_moves)
