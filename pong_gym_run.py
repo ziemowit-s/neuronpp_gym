@@ -7,8 +7,8 @@ from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.05
 
-AGENT_STEPSIZE = 100
 PLOT_PAUSE = 2
+AGENT_STEPSIZE = 100
 
 
 if __name__ == '__main__':
@@ -35,12 +35,12 @@ if __name__ == '__main__':
         if done:
             reset(env, SCREEN_RATIO)
 
+        # Make moves
         curr_time = time.time()*100
         if up_moves.size > 0:
             if (curr_time - move_time) >= up_moves[0]:
                 action = 2
                 up_moves = up_moves[1:]
-
         if down_moves.size > 0:
             if (curr_time - move_time) >= down_moves[0]:
                 if action == 2:
@@ -49,13 +49,16 @@ if __name__ == '__main__':
                     action = 3
                 down_moves = down_moves[1:]
 
+        # Sent observation to the Agent every AGENT_STEPSIZE ms
         if ((curr_time - move_time)) > AGENT_STEPSIZE:
             moves = agent.step(observation=obs, reward=reward)
             up_moves = moves[0]
             down_moves = moves[1]
+
             agent.rec.plot()
             plt.pause(PLOT_PAUSE)
             plt.close()
+
             move_time = time.time()*100
             print('up_move:', up_moves, 'down_move:', down_moves)
         time.sleep(0.05)

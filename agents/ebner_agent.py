@@ -29,7 +29,8 @@ class EbnerAgent:
                           , locs=0.5, variables='v')
 
         # init and warmup
-        self.sim = RunSim(init_v=-70, warmup=warmup)
+        ps = make_shape_plot()
+        self.sim = RunSim(init_v=-70, warmup=warmup, shape_plots=[ps])
 
         print("Agent setup done")
 
