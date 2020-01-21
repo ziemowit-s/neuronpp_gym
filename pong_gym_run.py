@@ -1,20 +1,18 @@
 import time
 import numpy as np
 
-import matplotlib.pyplot as plt
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
-SCREEN_RATIO = 0.05
+SCREEN_RATIO = 0.1
 
-PLOT_PAUSE = 2
-AGENT_STEPSIZE = 100
+AGENT_STEPSIZE = 50
 
 
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = EbnerAgent(input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE, warmup=200)
+    agent = EbnerAgent(input_cell_num=12, input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE, warmup=200)
     print('input_size', input_size)
 
     move_time = 0

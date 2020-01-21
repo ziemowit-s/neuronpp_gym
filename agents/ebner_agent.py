@@ -12,7 +12,7 @@ WEIGHT = 0.035
 
 
 class EbnerAgent:
-    def __init__(self, input_size, output_size, max_hz, stepsize=20, warmup=200, delay=1):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, stepsize=20, warmup=200, delay=1):
         self.stepsize = stepsize
         self.max_stim_num = 1000 / stepsize
         self.max_hz = max_hz
@@ -20,7 +20,7 @@ class EbnerAgent:
         self.inputs = []
         self.outputs = []
         self.motor_output = []
-        self._build_cells(input_cell_num=4, output_cell_num=output_size, input_size=input_size, delay=delay)
+        self._build_cells(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay)
 
         # Create time records
         self.time_vec = h.Vector().record(h._ref_t)
