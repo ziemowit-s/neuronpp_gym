@@ -4,15 +4,15 @@ import matplotlib.pyplot as plt
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
-SCREEN_RATIO = 0.1
+SCREEN_RATIO = 0.3
 
-AGENT_STEPSIZE = 25
+AGENT_STEPSIZE = 2
 
 
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = EbnerAgent(input_cell_num=12, input_size=input_size, output_size=2, max_hz=600, stepsize=AGENT_STEPSIZE, warmup=200,
+    agent = EbnerAgent(input_cell_num=8, hidden_cell_num=4, input_size=input_size, output_size=2, max_hz=600, stepsize=AGENT_STEPSIZE, warmup=200,
                        weight=0.035, motor_weight=0.005)
     print('input_size', input_size)
 
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     up_moves = np.array([])
     down_moves = np.array([])
     action = 0
-    while agent.sim.t < 10000:  # 10 sec
+    while True:
 
         env.render()
         obs, reward, done, info = env.step(action)

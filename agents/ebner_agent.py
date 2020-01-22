@@ -8,7 +8,7 @@ from neuronpp.utils.run_sim import RunSim
 
 
 class EbnerAgent:
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, weight, motor_weight=1.0, stepsize=20, warmup=200, delay=1):
+    def __init__(self, input_cell_num, hidden_cell_num, input_size, output_size, max_hz, weight, motor_weight=1.0, stepsize=20, warmup=200, delay=1):
         """
 
         :param input_cell_num:
@@ -28,9 +28,11 @@ class EbnerAgent:
         self.max_hz = max_hz
 
         self.inputs = []
+        self.hiddens = []
         self.outputs = []
+        self.all_other_syns = []
         self.motor_output = []
-        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay,
+        self._build_network(input_cell_num=input_cell_num, hidden_cell_num=hidden_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay,
                             weight=weight, motor_weight=motor_weight)
 
         # Create time records
@@ -91,7 +93,7 @@ class EbnerAgent:
             moves.append(times_of_move)
         return moves
 
-    def _build_network(self, input_cell_num, output_cell_num, input_size, weight, motor_weight, delay=1):
+    def _build_network(self, input_cell_num, hidden_cell_num, output_cell_num, input_size, weight, motor_weight, delay=1):
         # Make input cells
         for i in range(input_cell_num):
             cell = self._make_single_cell()
@@ -99,8 +101,8 @@ class EbnerAgent:
             self._add_mechs(cell)
             self.inputs.append((cell, syns))
 
-        # Make output cells
-        for i in range(output_cell_num):
+        # Make hidden cells
+        for i in range(hidden_cell_num):
             cell = self._make_single_cell()
             syns = []
             for c, s in self.inputs:
@@ -108,7 +110,32 @@ class EbnerAgent:
                                          weight=weight, random_weight=True)
                 syns.append(syn)
             self._add_mechs(cell)
+            self.hiddens.append((cell, syns))
+
+        # Make output cells
+        for i in range(output_cell_num):
+            cell = self._make_single_cell()
+            syns = []
+            for c, s in self.hiddens:
+                syn = self._make_synapse(cell, number=1, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=weight, random_weight=True)
+                syns.append(syn)
+            self._add_mechs(cell)
             self.outputs.append((cell, syns))
+        for c, s in self.outputs:
+            # Create retro syns from out to in
+            for c2, s2 in self.inputs:
+                syn = self._make_synapse(c, number=1, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=weight, random_weight=True)
+                self.all_other_syns.append(syn)
+            # Create inhibitory to between outputs
+            for c2, s2 in self.outputs:
+                if c == c2:
+                    continue
+                syn = self._make_synapse(c, number=1, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=weight, random_weight=True)
+                syn[0][0].point_process.hoc.e = -80
+                self.all_other_syns.append(syn)
 
         # Make motor outputs (dummy cells for motor stimulation)
         self._make_motor_output(weight=motor_weight)
