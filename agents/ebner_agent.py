@@ -1,5 +1,3 @@
-import random
-
 import numpy as np
 from neuron import h
 from neuronpp.cells.cell import Cell
@@ -8,11 +6,23 @@ from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
 from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
 
-WEIGHT = 0.035
-
 
 class EbnerAgent:
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, stepsize=20, warmup=200, delay=1):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, weight, motor_weight=1.0, stepsize=20, warmup=200, delay=1):
+        """
+
+        :param input_cell_num:
+        :param input_size:
+        :param output_size:
+        :param max_hz:
+        :param weight:
+            weight for input and output real cells
+        :param motor_weight:
+            weight for dummy motor cell
+        :param stepsize:
+        :param warmup:
+        :param delay:
+        """
         self.stepsize = stepsize
         self.max_stim_num = 1000 / stepsize
         self.max_hz = max_hz
@@ -20,7 +30,8 @@ class EbnerAgent:
         self.inputs = []
         self.outputs = []
         self.motor_output = []
-        self._build_cells(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay)
+        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay,
+                            weight=weight, motor_weight=motor_weight)
 
         # Create time records
         self.time_vec = h.Vector().record(h._ref_t)
@@ -61,10 +72,16 @@ class EbnerAgent:
         self.sim.run(self.stepsize)
 
         # Return actions as time of spikes in ms
-        moves = self.get_time_of_spikes(as_global_time=False)
+        moves = self.get_motor_output_spike_times(as_global_time=False)
         return moves
 
-    def get_time_of_spikes(self, as_global_time=True):
+    def get_motor_output_spike_times(self, as_global_time=True):
+        """
+
+        :param as_global_time:
+        :return:
+            Spike times of dummy cells representing motor output stimulation which produce action for dummy motors
+        """
         moves = []
         for o in self.motor_output:
             times_of_move = o.get_spikes()
@@ -75,24 +92,27 @@ class EbnerAgent:
             moves.append(times_of_move)
         return moves
 
-    def _build_cells(self, input_cell_num, output_cell_num, input_size, delay=1):
+    def _build_network(self, input_cell_num, output_cell_num, input_size, weight, motor_weight, delay=1):
+        # Make input cells
         for i in range(input_cell_num):
             cell = self._make_single_cell()
-            syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=delay)
+            syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=delay, weight=weight, random_weight=True)
             self._add_mechs(cell)
             self.inputs.append((cell, syns))
 
+        # Make output cells
         for i in range(output_cell_num):
             cell = self._make_single_cell()
             syns = []
             for c, s in self.inputs:
-                syn = self._make_synapse(cell, number=1, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5)
+                syn = self._make_synapse(cell, number=1, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=weight, random_weight=True)
                 syns.append(syn)
             self._add_mechs(cell)
             self.outputs.append((cell, syns))
 
-        # Make output
-        self._make_motor_output()
+        # Make motor outputs (dummy cells for motor stimulation)
+        self._make_motor_output(weight=motor_weight)
 
     @staticmethod
     def _make_single_cell():
@@ -109,19 +129,20 @@ class EbnerAgent:
         cell.make_apical_mechanisms(sections='dend head neck')
 
     @staticmethod
-    def _make_synapse(cell, number, delay, source=None, source_loc=None):
+    def _make_synapse(cell, number, delay, weight, random_weight, source=None, source_loc=None):
         # make synapses with spines
         syn_4p, heads = cell.make_spine_with_synapse(source=source, number=number, mod_name="Syn4PAChDa",
-                                                     weight=WEIGHT, rand_weight=True, delay=delay, **cell.params_4p_syn,
+                                                     weight=weight, rand_weight=random_weight, delay=delay, **cell.params_4p_syn,
                                                      source_loc=source_loc)
 
-        syn_ach = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynACh", sec=heads, delay=delay, **cell.params_ach)
-        syn_da = cell.make_sypanses(source=None, weight=WEIGHT, mod_name="SynDa", sec=heads, delay=delay, **cell.params_da)
+        syn_ach = cell.make_sypanses(source=None, weight=weight, mod_name="SynACh", sec=heads, delay=delay, **cell.params_ach)
+        syn_da = cell.make_sypanses(source=None, weight=weight, mod_name="SynDa", sec=heads, delay=delay, **cell.params_da)
         cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
+
         input_syns = list(zip(syn_4p, syn_ach, syn_da))
         return input_syns
 
-    def _make_motor_output(self):
+    def _make_motor_output(self, weight):
         """
         Make output for agent's motor/muscle
         """
@@ -131,7 +152,7 @@ class EbnerAgent:
             s = c.make_sec("soma", diam=10, l=10, nseg=1)
             c.insert("hh")
             c.insert("pas")
-            c.make_sypanses(source=sec, weight=0.4, mod_name="ExpSyn", sec=[s], source_loc=0.5, target_loc=0.5, threshold=-20, e=40, tau=8)
+            c.make_sypanses(source=sec, weight=weight, mod_name="ExpSyn", sec=[s], source_loc=0.5, target_loc=0.5, threshold=-20, e=40, tau=8)
             c.make_spike_detector()
             self.motor_output.append(c)
 
