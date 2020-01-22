@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
-SCREEN_RATIO = 0.3
+SCREEN_RATIO = 0.2
 
-AGENT_STEPSIZE = 2
+AGENT_STEPSIZE = 5
 
 
 if __name__ == '__main__':

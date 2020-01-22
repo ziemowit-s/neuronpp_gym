@@ -101,41 +101,32 @@ class EbnerAgent:
             self._add_mechs(cell)
             self.inputs.append((cell, syns))
 
-        # Make hidden cells
-        for i in range(hidden_cell_num):
-            cell = self._make_single_cell()
-            syns = []
-            for c, s in self.inputs:
-                syn = self._make_synapse(cell, number=1, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight, random_weight=True)
-                syns.append(syn)
-            self._add_mechs(cell)
-            self.hiddens.append((cell, syns))
-
         # Make output cells
         for i in range(output_cell_num):
             cell = self._make_single_cell()
             syns = []
-            for c, s in self.hiddens:
+            for c, s in self.inputs:
                 syn = self._make_synapse(cell, number=1, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight, random_weight=True)
+                                         weight=weight*input_cell_num, random_weight=True)
                 syns.append(syn)
             self._add_mechs(cell)
             self.outputs.append((cell, syns))
+
         for c, s in self.outputs:
-            # Create retro syns from out to in
+            # Create retro syns
             for c2, s2 in self.inputs:
                 syn = self._make_synapse(c, number=1, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
                                          weight=weight, random_weight=True)
                 self.all_other_syns.append(syn)
-            # Create inhibitory to between outputs
-            for c2, s2 in self.outputs:
-                if c == c2:
-                    continue
-                syn = self._make_synapse(c, number=1, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight, random_weight=True)
-                syn[0][0].point_process.hoc.e = -80
-                self.all_other_syns.append(syn)
+
+        # Create inhibitory to between outputs
+        for c2, s2 in self.outputs:
+            if c == c2:
+                continue
+            syn = self._make_synapse(c, number=1, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
+                                     weight=weight, random_weight=True)
+            syn[0][0].point_process.hoc.e = -80
+            self.all_other_syns.append(syn)
 
         # Make motor outputs (dummy cells for motor stimulation)
         self._make_motor_output(weight=motor_weight)
