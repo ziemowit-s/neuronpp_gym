@@ -39,8 +39,7 @@ class EbnerAgent:
         # Create v records
         rec1 = [cell.filter_secs("soma")[0] for cell, syns in self.outputs]
         rec2 = [cell.filter_secs("soma")[0] for cell in self.motor_output]
-        records = rec1+rec2
-        self.rec = Record(records, locs=0.5, variables='v')
+        self.rec = Record(rec1+rec2, locs=0.5, variables='v')
 
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)

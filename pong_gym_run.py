@@ -1,19 +1,19 @@
 import time
 import numpy as np
-
+import matplotlib.pyplot as plt
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.1
 
-AGENT_STEPSIZE = 50
+AGENT_STEPSIZE = 25
 
 
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = EbnerAgent(input_cell_num=12, input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE, warmup=200,
-                       weight=0.035, motor_weight=1.0)
+    agent = EbnerAgent(input_cell_num=12, input_size=input_size, output_size=2, max_hz=600, stepsize=AGENT_STEPSIZE, warmup=200,
+                       weight=0.035, motor_weight=0.005)
     print('input_size', input_size)
 
     move_time = 0
@@ -21,15 +21,17 @@ if __name__ == '__main__':
     up_moves = np.array([])
     down_moves = np.array([])
     action = 0
-    while True:
+    while agent.sim.t < 10000:  # 10 sec
 
         env.render()
         obs, reward, done, info = env.step(action)
         action = 0
         obs = prepare_pong_observation(obs, ratio=SCREEN_RATIO, show=False)
 
-        if done or reward != 0:
-            print('reward:', reward, "done:", done)
+        if reward != 0:
+            print('reward:', reward)
+            if reward < 0:
+                reset(env, SCREEN_RATIO)
 
         if done:
             reset(env, SCREEN_RATIO)
@@ -54,12 +56,10 @@ if __name__ == '__main__':
             up_moves = moves[0]
             down_moves = moves[1]
 
-            #agent.rec.plot()
-            #plt.pause(PLOT_PAUSE)
-            #plt.close()
-
             move_time = time.time()*100
             print('up_move:', up_moves, 'down_move:', down_moves)
         time.sleep(0.05)
 
+    agent.rec.plot()
+    plt.plot()
     env.close()
