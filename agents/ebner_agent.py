@@ -8,7 +8,7 @@ from neuronpp.utils.run_sim import RunSim
 
 
 class EbnerAgent:
-    def __init__(self, input_cell_num, hidden_cell_num, input_size, output_size, max_hz, weight, motor_weight=1.0, stepsize=20, warmup=200, delay=1):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, weight, motor_weight=1.0, stepsize=20, warmup=200, delay=1):
         """
 
         :param input_cell_num:
@@ -32,7 +32,7 @@ class EbnerAgent:
         self.outputs = []
         self.all_other_syns = []
         self.motor_output = []
-        self._build_network(input_cell_num=input_cell_num, hidden_cell_num=hidden_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay,
+        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay,
                             weight=weight, motor_weight=motor_weight)
 
         # Create time records
@@ -93,7 +93,7 @@ class EbnerAgent:
             moves.append(times_of_move)
         return moves
 
-    def _build_network(self, input_cell_num, hidden_cell_num, output_cell_num, input_size, weight, motor_weight, delay=1):
+    def _build_network(self, input_cell_num, output_cell_num, input_size, weight, motor_weight, delay=1):
         # Make input cells
         for i in range(input_cell_num):
             cell = self._make_single_cell()
@@ -107,7 +107,7 @@ class EbnerAgent:
             syns = []
             for c, s in self.inputs:
                 syn = self._make_synapse(cell, number=1, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight*input_cell_num, random_weight=True)
+                                         weight=weight, random_weight=True)
                 syns.append(syn)
             self._add_mechs(cell)
             self.outputs.append((cell, syns))
