@@ -33,8 +33,6 @@ def show_cv2(obs):
     if cv2.waitKey(1) & 0xFF == ord('q'):
         cv2.destroyAllWindows()
         raise GeneratorExit("OpenCV image show stopped.")
-    plt.imshow(obs, vmin=0, vmax=1)
-    plt.show()
 
 
 def prepare_pong_observation(obs, ratio, show=False):

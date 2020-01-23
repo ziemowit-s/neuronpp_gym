@@ -26,7 +26,7 @@ if __name__ == '__main__':
         env.render()
         obs, reward, done, info = env.step(action)
         action = 0
-        obs = prepare_pong_observation(obs, ratio=SCREEN_RATIO, show=True)
+        obs = prepare_pong_observation(obs, ratio=SCREEN_RATIO, show=False)
 
         if reward != 0:
             print('reward:', reward)
