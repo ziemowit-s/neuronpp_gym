@@ -153,8 +153,8 @@ class EbnerAgent:
                                                      weight=weight, rand_weight=random_weight, delay=delay, **cell.params_4p_syn,
                                                      source_loc=source_loc)
 
-        syn_ach = cell.make_sypanses(source=None, weight=weight, mod_name="SynACh", sec=heads, delay=delay, **cell.params_ach)
-        syn_da = cell.make_sypanses(source=None, weight=weight, mod_name="SynDa", sec=heads, delay=delay, **cell.params_da)
+        syn_ach = cell.make_sypanses(source=None, weight=weight, mod_name="SynACh", sec=heads, delay=delay)
+        syn_da = cell.make_sypanses(source=None, weight=weight, mod_name="SynDa", sec=heads, delay=delay)
         cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
 
         input_syns = list(zip(syn_4p, syn_ach, syn_da))
