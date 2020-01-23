@@ -44,8 +44,8 @@ ENDCOMMENT
   }
 
   PARAMETER {
-    ACh_tau = 10 (ms) <1e-9, 1e9>
-    Da_tau = 10 (ms) <1e-9, 1e9>
+    ACh_tau = 100 (ms) <1e-9, 1e9>
+    Da_tau = 100 (ms) <1e-9, 1e9>
 
   	: Parameters of the original Exp2Syn
   	tau_a = 0.2 (ms) <1e-9,1e9>			: time constant of EPSP rise // used for AMPAR currents
@@ -253,7 +253,7 @@ ENDCOMMENT
   	    flag_D_ACh = -1
 
   	    if(stdp_ach > 0){
-  	        ACh = stdp_ach :* ACh_w
+  	        ACh = stdp_ach * ACh_w
   	        stdp_ach = 0
   	        ach_stdp = 0
         } else {
@@ -264,7 +264,7 @@ ENDCOMMENT
   	    flag_D_Da = -1
 
   	    if(stdp_da > 0){
-  	        Da = stdp_da :* da_stdp
+  	        Da = stdp_da * Da_w
   	        stdp_da = 0
   	        da_stdp = 0
         } else {

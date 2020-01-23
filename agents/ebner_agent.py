@@ -91,8 +91,8 @@ class EbnerAgent:
             if not as_global_time:
                 min_time = self.sim.t - self.sim.last_runtime
                 times_of_move = np.array([i for i in times_of_move if i >= min_time])
-                times_of_move -= min_time
-                #times_of_move -= self.warmup
+                #times_of_move -= min_time
+                times_of_move -= self.warmup
             moves.append(times_of_move)
         return moves
 
@@ -109,8 +109,8 @@ class EbnerAgent:
             cell = self._make_single_cell()
             syns = []
             for c, s in self.inputs:
-                syn = self._make_synapse(cell, number=2, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight, random_weight=True)
+                syn = self._make_synapse(cell, number=4, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=weight)
                 syns.append(syn)
             self._add_mechs(cell)
             self.outputs.append((cell, syns))
@@ -118,8 +118,8 @@ class EbnerAgent:
         for c, s in self.outputs:
             # Create retro syns
             for c2, s2 in self.inputs:
-                syn = self._make_synapse(c, number=2, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight, random_weight=True)
+                syn = self._make_synapse(c, number=4, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=weight)
                 self.all_other_syns.append(syn)
 
         for c, s in self.outputs:
@@ -127,8 +127,8 @@ class EbnerAgent:
             for c2, s2 in self.outputs:
                 if c == c2:
                     continue
-                syn = self._make_synapse(c, number=2, delay=0, source=c2.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight, random_weight=True)
+                syn = self._make_synapse(c, number=4, delay=0, source=c2.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=weight)
                 syn[0][0].point_process.hoc.e = -80
                 self.all_other_syns.append(syn)
 
@@ -196,6 +196,9 @@ class EbnerAgent:
         return stim_num > 0
 
     def _get_single_stim_params(self, input_value):
-        stim_num = int(round((input_value * self.max_hz) / self.max_stim_num))
-        stim_int = self.stepsize / stim_num if stim_num > 0 else 0
+        stim_num = 0
+        stim_int = 0
+        if input_value > 0:
+            stim_num = int(round((input_value * self.max_hz) / self.max_stim_num))
+            stim_int = self.stepsize / stim_num if stim_num > 0 else 0
         return stim_num, stim_int
