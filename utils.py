@@ -36,32 +36,40 @@ def show_cv2(obs):
 
 
 def prepare_pong_observation(obs, ratio, show=False):
-    obs = obs[:, :, 2]  # take only one RGB array
-    obs = obs[34:193, :]  # remove boundaries and score
-
-    right_paddle = np.argwhere(obs == 92)
-    left_paddle = np.argwhere(obs == 74)
-    ball = np.argwhere(obs == 236)
-
-    if right_paddle.size > 0:
-        right_paddle = np.unique(np.array(np.round(right_paddle*ratio), dtype=int), axis=0)
-    if left_paddle.size > 0:
-        left_paddle = np.unique(np.array(np.round(left_paddle*ratio), dtype=int), axis=0)
-    if ball.size > 0:
-        ball = np.unique(np.array(np.round(ball*ratio), dtype=int), axis=0)
-
-    shape = np.array(np.round(np.array(obs.shape) * ratio), dtype=int)
-    obs = np.zeros(shape, dtype=int)
-
-    def make(ar, obj):
-        max_x = ar.shape[0]-1
-        max_y = ar.shape[1]-1
+    def make(obs_arr, obj):
+        max_x = obs_arr.shape[0] - 1
+        max_y = obs_arr.shape[1] - 1
         for x, y in obj:
             if x > max_x:
                 x = max_x
             if y > max_y:
                 y = max_y
-            ar[x, y] = 1
+            obs_arr[x, y] = 1
+
+    obs = obs[:, :, 2]  # take only one RGB array
+    obs = obs[34:193, 19:141]  # remove boundaries and score
+
+    right_paddle = np.argwhere(obs == 92)
+    left_paddle = np.argwhere(obs == 74)
+    ball = np.argwhere(obs == 236)
+
+    # left only the smallest possible middle parts of objects
+    if right_paddle.size > 0:
+        right_paddle = right_paddle[3:-3]
+        if right_paddle.size > 0:
+            right_paddle = np.unique(np.array(np.round(right_paddle*ratio), dtype=int), axis=0)
+    if left_paddle.size > 0:
+        left_paddle = left_paddle[3:-3]
+        if left_paddle.size > 0:
+            left_paddle = np.unique(np.array(np.round(left_paddle*ratio), dtype=int), axis=0)
+    if ball.size > 0:
+        max_col_index = np.max(ball, axis=0)[1]
+        ball = np.array([b for b in ball if b[1] == max_col_index])
+        if ball.size > 0:
+            ball = np.unique(np.array(np.round(ball*ratio), dtype=int), axis=0)
+
+    shape = np.array(np.round(np.array(obs.shape) * ratio), dtype=int)
+    obs = np.zeros(shape, dtype=int)
 
     if right_paddle.size > 0:
         make(obs, right_paddle)
@@ -72,6 +80,8 @@ def prepare_pong_observation(obs, ratio, show=False):
 
     if show:
         show_cv2(obs)
+        #plt.imshow(obs, vmin=0, vmax=1)
+        #plt.show()
 
     obs = np.reshape(obs, [obs.shape[0] * obs.shape[1]])
     return obs

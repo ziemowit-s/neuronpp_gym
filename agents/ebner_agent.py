@@ -35,6 +35,8 @@ class EbnerAgent:
         self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay,
                             weight=weight, motor_weight=motor_weight)
 
+        self.warmup = warmup
+
         # Create time records
         self.time_vec = h.Vector().record(h._ref_t)
 
@@ -90,6 +92,7 @@ class EbnerAgent:
                 min_time = self.sim.t - self.sim.last_runtime
                 times_of_move = np.array([i for i in times_of_move if i >= min_time])
                 times_of_move -= min_time
+                #times_of_move -= self.warmup
             moves.append(times_of_move)
         return moves
 
@@ -97,7 +100,7 @@ class EbnerAgent:
         # Make input cells
         for i in range(input_cell_num):
             cell = self._make_single_cell()
-            syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=delay, weight=weight, random_weight=True)
+            syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=delay, weight=weight)
             self._add_mechs(cell)
             self.inputs.append((cell, syns))
 
@@ -106,7 +109,7 @@ class EbnerAgent:
             cell = self._make_single_cell()
             syns = []
             for c, s in self.inputs:
-                syn = self._make_synapse(cell, number=1, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
+                syn = self._make_synapse(cell, number=2, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
                                          weight=weight, random_weight=True)
                 syns.append(syn)
             self._add_mechs(cell)
@@ -115,18 +118,19 @@ class EbnerAgent:
         for c, s in self.outputs:
             # Create retro syns
             for c2, s2 in self.inputs:
-                syn = self._make_synapse(c, number=1, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
+                syn = self._make_synapse(c, number=2, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
                                          weight=weight, random_weight=True)
                 self.all_other_syns.append(syn)
 
-        # Create inhibitory to between outputs
-        for c2, s2 in self.outputs:
-            if c == c2:
-                continue
-            syn = self._make_synapse(c, number=1, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
-                                     weight=weight, random_weight=True)
-            syn[0][0].point_process.hoc.e = -80
-            self.all_other_syns.append(syn)
+        for c, s in self.outputs:
+            # Create inhibitory to between outputs
+            for c2, s2 in self.outputs:
+                if c == c2:
+                    continue
+                syn = self._make_synapse(c, number=2, delay=0, source=c2.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=weight, random_weight=True)
+                syn[0][0].point_process.hoc.e = -80
+                self.all_other_syns.append(syn)
 
         # Make motor outputs (dummy cells for motor stimulation)
         self._make_motor_output(weight=motor_weight)
@@ -147,7 +151,7 @@ class EbnerAgent:
         cell.make_apical_mechanisms(sections='dend head neck')
 
     @staticmethod
-    def _make_synapse(cell, number, delay, weight, random_weight, source=None, source_loc=None):
+    def _make_synapse(cell, number, delay, weight, random_weight=False, source=None, source_loc=None):
         # make synapses with spines
         syn_4p, heads = cell.make_spine_with_synapse(source=source, number=number, mod_name="Syn4PAChDa",
                                                      weight=weight, rand_weight=random_weight, delay=delay, **cell.params_4p_syn,
