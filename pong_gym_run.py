@@ -14,7 +14,7 @@ ENV_STEPSIZE = ENV_STEPSIZE/1000
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = EbnerAgent(input_cell_num=6, input_size=input_size, output_size=2, max_hz=500, stepsize=AGENT_STEPSIZE, warmup=200,
+    agent = EbnerAgent(input_cell_num=6, input_size=input_size, output_size=2, max_hz=600, stepsize=AGENT_STEPSIZE, warmup=200,
                        weight=0.01, motor_weight=0.01)
     print('input_size', input_size)
 
