@@ -8,20 +8,15 @@ from neuronpp.utils.run_sim import RunSim
 
 
 class EbnerAgent:
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, weight, motor_weight=1.0, stepsize=20, warmup=200, delay=1):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, stepsize=20, warmup=200):
         """
 
         :param input_cell_num:
         :param input_size:
         :param output_size:
         :param max_hz:
-        :param weight:
-            weight for input and output real cells
-        :param motor_weight:
-            weight for dummy motor cell
         :param stepsize:
         :param warmup:
-        :param delay:
         """
         self.stepsize = stepsize
         self.max_stim_per_stepsize = (stepsize * max_hz) / 1000
@@ -37,8 +32,7 @@ class EbnerAgent:
 
         self.all_other_syns = []
         self.motor_output = []
-        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay,
-                            weight=weight, motor_weight=motor_weight)
+        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size)
 
         self.warmup = warmup
 
@@ -89,46 +83,28 @@ class EbnerAgent:
             moves.append(times_of_move)
         return moves
 
-    def _build_network(self, input_cell_num, output_cell_num, input_size, weight, motor_weight, delay=1):
-        # Make input cells
+    def _build_network(self, input_cell_num, output_cell_num, input_size):
+        # INPUTS
         for i in range(input_cell_num):
             cell = self._make_single_cell()
-            syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=delay, weight=weight,
+            syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=1, weight=0.01,
                                       with_neuromodulation=False, is_observation=True)
             self._add_mechs(cell)
             self.inputs.append((cell, syns))
 
-        # Make output cells
+        # OUTPUTS
         for i in range(output_cell_num):
             cell = self._make_single_cell()
             syns = []
             for c, s in self.inputs:
-                syn = self._make_synapse(cell, number=4, delay=delay, source=c.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight)
+                syn = self._make_synapse(cell, number=1, delay=1, source=c.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=0.01)
                 syns.append(syn)
             self._add_mechs(cell)
             self.outputs.append((cell, syns))
 
-        for c, s in self.outputs:
-            # Create retro syns
-            for c2, s2 in self.inputs:
-                syn = self._make_synapse(c, number=4, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight)
-                self.all_other_syns.append(syn)
-                #syn[0][0].point_process.hoc.e = -80
-
-        for c, s in self.outputs:
-            # Create inhibitory to between outputs
-            for c2, s2 in self.outputs:
-                if c == c2:
-                    continue
-                syn = self._make_synapse(c, number=4, delay=1, source=c2.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=1)
-                syn[0][0].point_process.hoc.e = -80
-                self.all_other_syns.append(syn)
-
-        # Make motor outputs (dummy cells for motor stimulation)
-        self._make_motor_output(weight=motor_weight)
+        # MOTORS
+        self._make_motor_output(weight=0.1)
 
     @staticmethod
     def _make_single_cell():
@@ -187,10 +163,11 @@ class EbnerAgent:
         for i, (cell, syns) in enumerate(self.outputs):
             sec = cell.filter_secs("soma")[0]
             c = Cell("output%s" % i)
-            s = c.make_sec("soma", diam=10, l=10, nseg=1)
+            s = c.make_sec("soma", diam=5, l=5, nseg=1)
             c.insert("hh")
             c.insert("pas")
-            c.make_sypanses(source=sec, weight=weight, mod_name="ExpSyn", sec=[s], source_loc=0.5, target_loc=0.5, threshold=-20, e=40, tau=8)
+            c.make_sypanses(source=sec, weight=weight, mod_name="ExpSyn", sec=[s], source_loc=0.5,
+                            target_loc=0.5, threshold=10, e=40, tau=3, delay=2)
             c.make_spike_detector()
             self.motor_output.append(c)
 
@@ -201,7 +178,6 @@ class EbnerAgent:
             stim_num = np.random.poisson(self.max_stim_per_stepsize, 1)[0]
             if stim_num > 0:
                 stim_int = self.stepsize/stim_num
-                print('STIM!')
         return stim_num, stim_int
 
     def _make_reward(self, reward):
@@ -214,9 +190,9 @@ class EbnerAgent:
 
     def _make_observation(self, observation):
         for obs, syn in zip(observation, self.observation_syns):
-            #if obs > 0:
-                #stim_num, interval = self._get_poisson_stim(obs)
-                #next_event = 0
-                #for e in range(stim_num):
-            syn.make_event(1)
-                    #next_event += interval
+            if obs > 0:
+                stim_num, interval = self._get_poisson_stim(obs)
+                next_event = 0
+                for e in range(stim_num):
+                    syn.make_event(next_event)
+                    next_event += interval
