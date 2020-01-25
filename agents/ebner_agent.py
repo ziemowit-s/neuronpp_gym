@@ -57,7 +57,7 @@ class EbnerAgent:
         if observation is not None:
             self._make_observation(observation)
         if reward is not None and reward != 0:
-            self._make_reward(reward)
+            self.make_reward(reward)
 
         # Run
         self.sim.run(self.stepsize)
@@ -156,8 +156,9 @@ class EbnerAgent:
         if is_observation:
             self.observation_syns.extend(syn_4p)
 
+        # Da is 10x of ACh
         if with_neuromodulation:
-            syn_ach = cell.make_sypanses(source=None, weight=weight*10, mod_name="SynACh", sec=heads, delay=delay)
+            syn_ach = cell.make_sypanses(source=None, weight=weight, mod_name="SynACh", sec=heads, delay=delay)
             syn_da = cell.make_sypanses(source=None, weight=weight*10, mod_name="SynDa", sec=heads, delay=delay)
             cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
             syns = list(zip(syn_4p, syn_ach, syn_da))
@@ -189,7 +190,7 @@ class EbnerAgent:
                 stim_int = self.stepsize/stim_num
         return stim_num, stim_int
 
-    def _make_reward(self, reward):
+    def make_reward(self, reward):
         if reward > 0:
             for s in self.reward_syns:
                 s.make_event(1)

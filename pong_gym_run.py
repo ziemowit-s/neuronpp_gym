@@ -14,7 +14,7 @@ ENV_STEPSIZE = ENV_STEPSIZE/1000
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = EbnerAgent(input_cell_num=6, input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE, warmup=200)
+    agent = EbnerAgent(input_cell_num=12, input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE, warmup=200)
     print('input_size', input_size)
 
     agent_compute_time = 0
@@ -44,6 +44,10 @@ if __name__ == '__main__':
             new_moves = agent.step(observation=obs, reward=reward)
             up_moves = new_moves[0]
             down_moves = new_moves[1]
+
+            # Reward for single move
+            if len(up_moves) - len(down_moves) != 0:
+                agent.make_reward(1)
 
             if len(up_moves) > 0 or len(down_moves) > 0:
                 print("up:", up_moves, "down:", down_moves)
