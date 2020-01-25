@@ -30,6 +30,11 @@ class EbnerAgent:
         self.inputs = []
         self.hiddens = []
         self.outputs = []
+
+        self.reward_syns = []
+        self.punish_syns = []
+        self.observation_syns = []
+
         self.all_other_syns = []
         self.motor_output = []
         self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size, delay=delay,
@@ -41,42 +46,30 @@ class EbnerAgent:
         self.time_vec = h.Vector().record(h._ref_t)
 
         # Create v records
+        rec0 = [cell.filter_secs("soma")[0] for cell, syns in self.inputs]
+        self.rec_in = Record(rec0, locs=0.5, variables='v')
+
         rec1 = [cell.filter_secs("soma")[0] for cell, syns in self.outputs]
         rec2 = [cell.filter_secs("soma")[0] for cell in self.motor_output]
-        self.rec = Record(rec1+rec2, locs=0.5, variables='v')
+        self.rec_out = Record(rec1 + rec2, locs=0.5, variables='v')
 
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
 
     def step(self, observation=None, reward=None):
         """
-
-        :param observation:
-        :param reward:
-        :return:
-            Return actions as numpy array of time of spikes in ms.
+        Return actions as numpy array of time of spikes in ms.
         """
-
         if observation is not None:
-            syn4ps = [ss[0] for cell, syns in self.inputs for ss in syns]
-            for obs, syn in zip(observation, syn4ps):
-                self._make_stim(input_value=obs, synapse=syn)
-
-        if reward > 0:
-            das = [ss[2] for cell, syns in self.inputs for ss in syns] + [ss[2] for cell, syns in self.inputs for ss in syns]
-            for s in das:
-                s.make_event(1)
-        elif reward < 0:
-            achs = [ss[1] for cell, syns in self.inputs for ss in syns] + [ss[1] for cell, syns in self.inputs for ss in syns]
-            for s in achs:
-                s.make_event(1)
+            self._make_observation(observation)
+        if reward is not None:
+            self._make_reward(reward)
 
         # Run
         self.sim.run(self.stepsize)
 
         # Return actions as time of spikes in ms
-        moves = self.get_motor_output_spike_times(as_global_time=False)
-        return moves
+        return self.get_motor_output_spike_times(as_global_time=False)
 
     def get_motor_output_spike_times(self, as_global_time=True):
         """
@@ -100,7 +93,8 @@ class EbnerAgent:
         # Make input cells
         for i in range(input_cell_num):
             cell = self._make_single_cell()
-            syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=delay, weight=weight)
+            syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=delay, weight=weight,
+                                      with_neuromodulation=False, is_observation=True)
             self._add_mechs(cell)
             self.inputs.append((cell, syns))
 
@@ -121,14 +115,15 @@ class EbnerAgent:
                 syn = self._make_synapse(c, number=4, delay=delay, source=c2.filter_secs("soma")[0], source_loc=0.5,
                                          weight=weight)
                 self.all_other_syns.append(syn)
+                #syn[0][0].point_process.hoc.e = -80
 
         for c, s in self.outputs:
             # Create inhibitory to between outputs
             for c2, s2 in self.outputs:
                 if c == c2:
                     continue
-                syn = self._make_synapse(c, number=4, delay=0, source=c2.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=weight)
+                syn = self._make_synapse(c, number=4, delay=1, source=c2.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=1)
                 syn[0][0].point_process.hoc.e = -80
                 self.all_other_syns.append(syn)
 
@@ -150,19 +145,40 @@ class EbnerAgent:
         cell.make_soma_mechanisms()
         cell.make_apical_mechanisms(sections='dend head neck')
 
-    @staticmethod
-    def _make_synapse(cell, number, delay, weight, random_weight=False, source=None, source_loc=None):
-        # make synapses with spines
-        syn_4p, heads = cell.make_spine_with_synapse(source=source, number=number, mod_name="Syn4PAChDa",
+    def _make_synapse(self, cell, number, delay, weight, random_weight=True, source=None, source_loc=None,
+                      with_neuromodulation=True, is_observation=False):
+        """
+
+        :param cell:
+        :param number:
+        :param delay:
+        :param weight:
+        :param synapse_type:
+            'exc' or 'inh'
+        :param random_weight:
+        :param source:
+        :param source_loc:
+        :param with_neuromodulation:
+        :return:
+        """
+        if with_neuromodulation:
+            mod = "Syn4PAChDa"
+        else:
+            mod = "Syn4P"
+        syn_4p, heads = cell.make_spine_with_synapse(source=source, number=number, mod_name=mod,
                                                      weight=weight, rand_weight=random_weight, delay=delay, **cell.params_4p_syn,
                                                      source_loc=source_loc)
+        if is_observation:
+            self.observation_syns.extend(syn_4p)
 
-        syn_ach = cell.make_sypanses(source=None, weight=weight, mod_name="SynACh", sec=heads, delay=delay)
-        syn_da = cell.make_sypanses(source=None, weight=weight, mod_name="SynDa", sec=heads, delay=delay)
-        cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
-
-        input_syns = list(zip(syn_4p, syn_ach, syn_da))
-        return input_syns
+        if with_neuromodulation:
+            syn_ach = cell.make_sypanses(source=None, weight=weight*10, mod_name="SynACh", sec=heads, delay=delay)
+            syn_da = cell.make_sypanses(source=None, weight=weight*10, mod_name="SynDa", sec=heads, delay=delay)
+            cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
+            syns = list(zip(syn_4p, syn_ach, syn_da))
+        else:
+            syns = syn_4p
+        return syns
 
     def _make_motor_output(self, weight):
         """
@@ -178,23 +194,6 @@ class EbnerAgent:
             c.make_spike_detector()
             self.motor_output.append(c)
 
-    def _make_stim(self, input_value, synapse):
-        """
-        :param input_value:
-        :param synapse:
-            tuple(syn4p, synach, synda)
-        :return:
-            returns is_spiked bool
-        """
-        stim_num, interval = self._get_single_stim_params(input_value)
-
-        next_event = interval
-        for e in range(stim_num):
-            synapse.make_event(next_event)
-            next_event += interval
-
-        return stim_num > 0
-
     def _get_single_stim_params(self, input_value):
         stim_num = 0
         stim_int = 0
@@ -202,3 +201,20 @@ class EbnerAgent:
             stim_num = int(round((input_value * self.max_hz) / self.max_stim_num))
             stim_int = self.stepsize / stim_num if stim_num > 0 else 0
         return stim_num, stim_int
+
+    def _make_reward(self, reward):
+        if reward > 0:
+            for s in self.reward_syns:
+                s.make_event(1)
+        elif reward < 0:
+            for s in self.punish_syns:
+                s.make_event(1)
+
+    def _make_observation(self, observation):
+        for obs, syn in zip(observation, self.observation_syns):
+            if obs > 0:
+                stim_num, interval = self._get_single_stim_params(obs)
+                next_event = 0
+                for e in range(stim_num):
+                    syn.make_event(next_event)
+                    next_event += interval
