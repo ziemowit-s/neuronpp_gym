@@ -24,7 +24,7 @@ class EbnerAgent:
         :param delay:
         """
         self.stepsize = stepsize
-        self.max_stim_num = 1000 / stepsize
+        self.max_stim_per_stepsize = (stepsize * max_hz) / 1000
         self.max_hz = max_hz
 
         self.inputs = []
@@ -194,12 +194,14 @@ class EbnerAgent:
             c.make_spike_detector()
             self.motor_output.append(c)
 
-    def _get_single_stim_params(self, input_value):
+    def _get_poisson_stim(self, single_input_value):
         stim_num = 0
         stim_int = 0
-        if input_value > 0:
-            stim_num = int(round((input_value * self.max_hz) / self.max_stim_num))
-            stim_int = self.stepsize / stim_num if stim_num > 0 else 0
+        if single_input_value > 0:
+            stim_num = np.random.poisson(self.max_stim_per_stepsize, 1)[0]
+            if stim_num > 0:
+                stim_int = self.stepsize/stim_num
+                print('STIM!')
         return stim_num, stim_int
 
     def _make_reward(self, reward):
@@ -213,7 +215,7 @@ class EbnerAgent:
     def _make_observation(self, observation):
         for obs, syn in zip(observation, self.observation_syns):
             if obs > 0:
-                stim_num, interval = self._get_single_stim_params(obs)
+                stim_num, interval = self._get_poisson_stim(obs)
                 next_event = 0
                 for e in range(stim_num):
                     syn.make_event(next_event)
