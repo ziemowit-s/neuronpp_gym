@@ -88,7 +88,7 @@ class EbnerAgent:
         for i in range(input_cell_num):
             cell = self._make_single_cell()
             syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=1, weight=0.01,
-                                      with_neuromodulation=False, is_observation=True)
+                                      with_neuromodulation=True, is_observation=True)
             self._add_mechs(cell)
             self.inputs.append((cell, syns))
 
@@ -102,15 +102,6 @@ class EbnerAgent:
                 syns.append(syn)
             self._add_mechs(cell)
             self.outputs.append((cell, syns))
-
-        for c, s in self.outputs:
-            # Create inhibitory to between outputs
-            for c2, s2 in self.outputs:
-                if c == c2:
-                    continue
-                syn = self._make_synapse(c, number=4, delay=1, source=c2.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=-0.01)
-                self.all_other_syns.append(syn)
 
         # MOTORS
         self._make_motor_output(weight=0.1)
@@ -130,7 +121,7 @@ class EbnerAgent:
         cell.make_soma_mechanisms()
         cell.make_apical_mechanisms(sections='dend head neck')
 
-    def _make_synapse(self, cell, number, delay, weight, random_weight=False, source=None, source_loc=None,
+    def _make_synapse(self, cell, number, delay, weight, random_weight=True, source=None, source_loc=None,
                       with_neuromodulation=True, is_observation=False):
         """
 
