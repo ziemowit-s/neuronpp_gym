@@ -62,7 +62,7 @@ class EbnerAgent:
         """
         if observation is not None:
             self._make_observation(observation)
-        if reward is not None:
+        if reward is not None and reward != 0:
             self._make_reward(reward)
 
         # Run
@@ -145,7 +145,7 @@ class EbnerAgent:
         cell.make_soma_mechanisms()
         cell.make_apical_mechanisms(sections='dend head neck')
 
-    def _make_synapse(self, cell, number, delay, weight, random_weight=True, source=None, source_loc=None,
+    def _make_synapse(self, cell, number, delay, weight, random_weight=False, source=None, source_loc=None,
                       with_neuromodulation=True, is_observation=False):
         """
 
@@ -214,9 +214,9 @@ class EbnerAgent:
 
     def _make_observation(self, observation):
         for obs, syn in zip(observation, self.observation_syns):
-            if obs > 0:
-                stim_num, interval = self._get_poisson_stim(obs)
-                next_event = 0
-                for e in range(stim_num):
-                    syn.make_event(next_event)
-                    next_event += interval
+            #if obs > 0:
+                #stim_num, interval = self._get_poisson_stim(obs)
+                #next_event = 0
+                #for e in range(stim_num):
+            syn.make_event(1)
+                    #next_event += interval

@@ -6,7 +6,7 @@ from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.2
 
-AGENT_STEPSIZE = 5
+AGENT_STEPSIZE = 50
 ENV_STEPSIZE = 3
 ENV_STEPSIZE = ENV_STEPSIZE/1000
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
             agent_compute_time = time.time()
 
         #agent.rec_out.plot()
-        agent.rec.plot(max_plot_on_fig=10)
+        agent.rec_in.plot(max_plot_on_fig=10)
         plt.pause(0.5)
         plt.close()
     env.close()
