@@ -34,6 +34,7 @@ if __name__ == '__main__':
 
         if reward != 0:
             print('reward:', reward)
+            reset(env, SCREEN_RATIO)
         if done:
             reset(env, SCREEN_RATIO)
 

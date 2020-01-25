@@ -103,6 +103,15 @@ class EbnerAgent:
             self._add_mechs(cell)
             self.outputs.append((cell, syns))
 
+        for c, s in self.outputs:
+            # Create inhibitory to between outputs
+            for c2, s2 in self.outputs:
+                if c == c2:
+                    continue
+                syn = self._make_synapse(c, number=4, delay=1, source=c2.filter_secs("soma")[0], source_loc=0.5,
+                                         weight=-0.01)
+                self.all_other_syns.append(syn)
+
         # MOTORS
         self._make_motor_output(weight=0.1)
 
@@ -167,7 +176,7 @@ class EbnerAgent:
             c.insert("hh")
             c.insert("pas")
             c.make_sypanses(source=sec, weight=weight, mod_name="ExpSyn", sec=[s], source_loc=0.5,
-                            target_loc=0.5, threshold=10, e=40, tau=3, delay=2)
+                            target_loc=0.5, threshold=10, e=40, tau=3, delay=3)
             c.make_spike_detector()
             self.motor_output.append(c)
 
