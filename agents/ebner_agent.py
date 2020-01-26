@@ -154,7 +154,6 @@ class EbnerAgent:
                 if np.sum(window) > 0:
                     self._make_1d_observation(observation=window.flatten(), syns=syns[syn_i])
                 syn_i += 1
-                print()
 
     def make_reward(self, reward):
         if reward > 0:
