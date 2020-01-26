@@ -1,67 +1,17 @@
-from abc import ABC
-
 import numpy as np
 from neuron import h
-from neuronpp.cells.cell import Cell
 
-from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
 from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
 
-from agents.population import Population
-
-
-class ExcitatoryPopulation(Population, ABC):
-    def _create_single_cell(self) -> Cell:
-        cell = Ebner2019AChDACell("input_cell", compile_paths="agents/utils/mods/ebner2019 agents/utils/mods/4p_ach_da_syns")
-        cell.make_sec("soma", diam=20, l=20, nseg=10)
-        cell.make_sec("dend", diam=8, l=500, nseg=100)
-        cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
-        return cell
-
-
-class InputPopulation(ExcitatoryPopulation):
-    def _connect_sigle_cell(self, source_section, cell, loc, syn_num_per_source=1, delay=1, weight=1, random_weight=True, source=None, **kwargs):
-
-        syns_4p, heads = cell.make_spine_with_synapse(source=source_section, number=syn_num_per_source, mod_name="Syn4P",
-                                                      weight=weight, rand_weight=random_weight, delay=delay, **cell.params_4p_syn,
-                                                      source_loc=loc)
-        return syns_4p
-
-
-class OutputPopulation(ExcitatoryPopulation):
-    def _connect_sigle_cell(self, source_section, cell, loc, syn_num_per_source=1, delay=1, weight=1, random_weight=True, source=None, **kwargs):
-
-        syns_4p, heads = cell.make_spine_with_synapse(source=source_section, number=syn_num_per_source, mod_name="Syn4PAChDa",
-                                                      weight=weight, rand_weight=random_weight, delay=delay, **cell.params_4p_syn,
-                                                      source_loc=loc)
-        # Da is 10x of ACh
-        syns_ach = cell.make_sypanses(source=None, weight=weight, mod_name="SynACh", sec=heads, delay=delay)
-        syns_da = cell.make_sypanses(source=None, weight=weight * 10, mod_name="SynDa", sec=heads, delay=delay)
-        cell.set_synaptic_pointers(syns_4p, syns_ach, syns_da)
-        syns = list(zip(syns_4p, syns_ach, syns_da))
-        return syns
-
-
-class MotorPopuation(Population):
-    def _create_single_cell(self) -> Cell:
-        cell = Cell("output")
-        cell.make_sec("soma", diam=5, l=5, nseg=1)
-        cell.insert('pas')
-        cell.insert('hh')
-        cell.make_spike_detector()
-        return cell
-
-    def _connect_sigle_cell(self, source_section, cell, loc, weight=1, **kwargs) -> list:
-        syns = cell.make_sypanses(source=source_section, weight=weight, mod_name="ExpSyn", sec="soma", source_loc=loc,
-                                  target_loc=0.5, threshold=10, e=40, tau=3, delay=3)
-        return syns
+from populations.input_population import InputPopulation
+from populations.motor_population import MotorPopuation
+from populations.output_population import OutputPopulation
 
 
 class EbnerAgent:
     def __init__(self, input_cell_num, input_size, output_size, max_hz, stepsize=20, warmup=200):
         """
-
         :param input_cell_num:
         :param input_size:
         :param output_size:
@@ -82,11 +32,7 @@ class EbnerAgent:
         self.observation_syns = []
 
         self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size)
-
         self.warmup = warmup
-
-        # Create time records
-        self.time_vec = h.Vector().record(h._ref_t)
 
         # Create v records
         rec0 = [cell.filter_secs("soma")[0] for cell in self.inputs]

@@ -1,11 +1,8 @@
 import time
-import numpy as np
-import matplotlib.pyplot as plt
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.2
-
 AGENT_STEPSIZE = 3
 ENV_STEPSIZE = 3
 ENV_STEPSIZE = ENV_STEPSIZE/1000
@@ -38,26 +35,28 @@ if __name__ == '__main__':
         if done:
             reset(env, SCREEN_RATIO)
 
+        # write time before agent step
         current_time_relative = (time.time() - agent_compute_time)
-        # Sent observation to the Agent every AGENT_STEPSIZE ms
+
+        # Sent observation to the Agent every ENV_STEPSIZE ms
         if agent_compute_time == 0 or current_time_relative > ENV_STEPSIZE:
+            # agent step
             new_moves = agent.step(observation=obs, reward=reward)
+
             up_moves = new_moves[0]
             down_moves = new_moves[1]
-
-            # Reward for single move
-            #if len(up_moves) - len(down_moves) != 0:
-            #    agent.make_reward(1)
-
+            # print moves
             if len(up_moves) > 0 or len(down_moves) > 0:
                 print("up:", up_moves, "down:", down_moves)
 
-            new_moves = sorted([(2, m) for m in up_moves] + [(3, m) for m in down_moves], key=lambda x: x[1])
-            moves.extend(new_moves)
+                # extend moves list with new moves
+                new_moves = sorted([(2, m) for m in up_moves] + [(3, m) for m in down_moves], key=lambda x: x[1])
+                moves.extend(new_moves)
+
+            # write time after agent step
             agent_compute_time = time.time()
 
-        agent.rec_out.plot()
-        #agent.rec_in.plot(max_plot_on_fig=10)
-        plt.pause(0.5)
-        plt.close()
-    env.close()
+        # plot input neurons
+        agent.rec_out.plot(position=(2, 2))
+        # plot output neurons
+        agent.rec_in.plot(position=(3, 3))
