@@ -5,6 +5,7 @@ from neuronpp.cells.cell import Cell
 
 class Population:
     def __init__(self):
+        self.cell_counter = 0
         self.cells = []
         self.syns = []
 
@@ -12,6 +13,7 @@ class Population:
         result = []
         for i in range(cell_num):
             cell = self._create_single_cell(**kwargs)
+            self.cell_counter += 1
             self.cells.append(cell)
             result.append(cell)
 
@@ -32,6 +34,7 @@ class Population:
             'all' - all-to-all connections
             'one' - one-to-one connections
         :return:
+            list of list of synapses
         """
         result = []
         if sources is None:
@@ -44,18 +47,16 @@ class Population:
             for source_cell in sources:
                 for cell in self.cells:
                     syns = self._conn(source_cell, sec_name, cell, loc, **kwargs)
-                    self.syns.extend(syns)
-                    result.extend(syns)
+                    result.append(syns)
 
         elif rule == 'one':
             for source_cell, cell in zip(sources, self.cells):
                 syns = self._conn(source_cell, sec_name, cell, loc, **kwargs)
-                self.syns.extend(syns)
-                result.extend(syns)
-
+                result.append(syns)
         else:
             raise TypeError("The only allowed rules are 'all' or 'one', but provided rule '%s'" % rule)
 
+        self.syns.extend(result)
         return result
 
     def _conn(self, source_cell, sec_name, cell, loc, **kwargs):

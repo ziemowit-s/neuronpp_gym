@@ -36,6 +36,13 @@ def show_cv2(obs):
 
 
 def prepare_pong_observation(obs, ratio, show=False):
+    """
+    :param obs:
+    :param ratio:
+    :param show:
+        it True - show what agent is see (white pixels=1, black pixels=0)
+    :return:
+    """
     def make(obs_arr, obj):
         max_x = obs_arr.shape[0] - 1
         max_y = obs_arr.shape[1] - 1

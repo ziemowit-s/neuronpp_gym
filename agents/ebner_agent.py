@@ -10,7 +10,7 @@ from populations.output_population import OutputPopulation
 
 
 class EbnerAgent:
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, stepsize=20, warmup=200):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, random_weight=False, stepsize=20, warmup=200):
         """
         :param input_cell_num:
         :param input_size:
@@ -22,6 +22,7 @@ class EbnerAgent:
         self.stepsize = stepsize
         self.max_stim_per_stepsize = (stepsize * max_hz) / 1000
         self.max_hz = max_hz
+        self.input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
 
         self.inputs = []
         self.outputs = []
@@ -31,7 +32,7 @@ class EbnerAgent:
         self.punish_syns = []
         self.observation_syns = []
 
-        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size)
+        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, random_weight=random_weight)
         self.warmup = warmup
 
         # Create v records
@@ -45,7 +46,7 @@ class EbnerAgent:
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
 
-    def _build_network(self, input_cell_num, output_cell_num, input_size):
+    def _build_network(self, input_cell_num, output_cell_num, random_weight):
         # Helper function
         def add_mechs(cell):
             cell.make_soma_mechanisms()
@@ -54,15 +55,15 @@ class EbnerAgent:
         # INPUTS
         input_pop = InputPopulation()
         self.inputs = input_pop.create(input_cell_num)
-        self.observation_syns = input_pop.connect(sources=None, syn_num_per_source=round(input_size / input_cell_num), delay=1, weight=0.01,
-                                                  random_weight=True, rule='one')
+        self.observation_syns = input_pop.connect(sources=None, syn_num_per_source=self.input_syn_per_cell, delay=1, weight=0.01,
+                                                  random_weight=random_weight, rule='one')
         input_pop.add_mechs(single_cell_mechs=add_mechs)
 
         # OUTPUTS
         output_pop = OutputPopulation()
         self.outputs = output_pop.create(output_cell_num)
-        syns = output_pop.connect(sources=input_pop.cells, random_weight=True, syn_num_per_source=1, delay=1, weight=0.01, rule='all')
-        for hebb, ach, da in syns:
+        syns = output_pop.connect(sources=input_pop.cells, random_weight=random_weight, syn_num_per_source=1, delay=1, weight=0.01, rule='all')
+        for hebb, ach, da in [s for slist in syns for s in slist]:
             self.reward_syns.append(da)
             self.punish_syns.append(ach)
         output_pop.add_mechs(single_cell_mechs=add_mechs)
@@ -82,7 +83,7 @@ class EbnerAgent:
         if observation is not None:
             dim = observation.ndim
             if dim == 1:
-                self._make_1d_observation(observation, syns=self.observation_syns)
+                self._make_1d_observation(observation, syns=[s for cell, syns in self.observation_syns for s in syns])
             elif dim == 2:
                 self._make_2d_observation(observation, syns=self.observation_syns)
             else:
@@ -134,26 +135,26 @@ class EbnerAgent:
             If None - will be of y_window size
         :return:
         """
-        inp_len = len(self.inputs)
+        div = np.sqrt(len(self.inputs))
         x_shape = observation.shape[1]
         y_shape = observation.shape[0]
 
-        x_window = int(np.ceil(x_shape / inp_len))
-        y_window = int(np.ceil(y_shape / inp_len))
+        x_window = int(np.ceil(x_shape / div))
+        y_window = int(np.ceil(y_shape / div))
         if x_stride is None:
             x_stride = x_window
         if y_stride is None:
             y_stride = y_window
 
-        syn_last_i = 0
-        for x in range(0, x_shape + x_stride, x_stride):
-            for y in range(0, y_shape + y_stride, y_stride):
+        syn_i = 0
+        for y in range(0, y_shape, y_stride):
+            for x in range(0, x_shape, x_stride):
+
                 window = observation[y:y + y_window, x:x + x_window]
                 if np.sum(window) > 0:
-                    if window.size == 0:
-                        continue
-                    self._make_1d_observation(observation=window.flatten(), syns=syns[syn_last_i:syn_last_i + window.size])
-                syn_last_i += window.size
+                    self._make_1d_observation(observation=window.flatten(), syns=syns[syn_i])
+                syn_i += 1
+                print()
 
     def make_reward(self, reward):
         if reward > 0:
