@@ -1,4 +1,4 @@
-from math import ceil
+from abc import ABC
 
 import numpy as np
 from neuron import h
@@ -7,6 +7,55 @@ from neuronpp.cells.cell import Cell
 from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
 from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
+
+from agents.population import Population
+
+
+class ExcitatoryPopulation(Population, ABC):
+    def _create_single_cell(self) -> Cell:
+        cell = Ebner2019AChDACell("input_cell", compile_paths="agents/utils/mods/ebner2019 agents/utils/mods/4p_ach_da_syns")
+        cell.make_sec("soma", diam=20, l=20, nseg=10)
+        cell.make_sec("dend", diam=8, l=500, nseg=100)
+        cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
+        return cell
+
+
+class InputPopulation(ExcitatoryPopulation):
+    def _connect_sigle_cell(self, source_section, cell, loc, syn_num_per_source=1, delay=1, weight=1, random_weight=True, source=None, **kwargs):
+
+        syns_4p, heads = cell.make_spine_with_synapse(source=source_section, number=syn_num_per_source, mod_name="Syn4P",
+                                                      weight=weight, rand_weight=random_weight, delay=delay, **cell.params_4p_syn,
+                                                      source_loc=loc)
+        return syns_4p
+
+
+class OutputPopulation(ExcitatoryPopulation):
+    def _connect_sigle_cell(self, source_section, cell, loc, syn_num_per_source=1, delay=1, weight=1, random_weight=True, source=None, **kwargs):
+
+        syns_4p, heads = cell.make_spine_with_synapse(source=source_section, number=syn_num_per_source, mod_name="Syn4PAChDa",
+                                                      weight=weight, rand_weight=random_weight, delay=delay, **cell.params_4p_syn,
+                                                      source_loc=loc)
+        # Da is 10x of ACh
+        syns_ach = cell.make_sypanses(source=None, weight=weight, mod_name="SynACh", sec=heads, delay=delay)
+        syns_da = cell.make_sypanses(source=None, weight=weight * 10, mod_name="SynDa", sec=heads, delay=delay)
+        cell.set_synaptic_pointers(syns_4p, syns_ach, syns_da)
+        syns = list(zip(syns_4p, syns_ach, syns_da))
+        return syns
+
+
+class MotorPopuation(Population):
+    def _create_single_cell(self) -> Cell:
+        cell = Cell("output")
+        cell.make_sec("soma", diam=5, l=5, nseg=1)
+        cell.insert('pas')
+        cell.insert('hh')
+        cell.make_spike_detector()
+        return cell
+
+    def _connect_sigle_cell(self, source_section, cell, loc, weight=1, **kwargs) -> list:
+        syns = cell.make_sypanses(source=source_section, weight=weight, mod_name="ExpSyn", sec="soma", source_loc=loc,
+                                  target_loc=0.5, threshold=10, e=40, tau=3, delay=3)
+        return syns
 
 
 class EbnerAgent:
@@ -25,15 +74,13 @@ class EbnerAgent:
         self.max_hz = max_hz
 
         self.inputs = []
-        self.hiddens = []
         self.outputs = []
+        self.motor_output = []
 
         self.reward_syns = []
         self.punish_syns = []
         self.observation_syns = []
 
-        self.all_other_syns = []
-        self.motor_output = []
         self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, input_size=input_size)
 
         self.warmup = warmup
@@ -42,20 +89,50 @@ class EbnerAgent:
         self.time_vec = h.Vector().record(h._ref_t)
 
         # Create v records
-        rec0 = [cell.filter_secs("soma")[0] for cell, syns in self.inputs]
+        rec0 = [cell.filter_secs("soma")[0] for cell in self.inputs]
         self.rec_in = Record(rec0, locs=0.5, variables='v')
 
-        rec1 = [cell.filter_secs("soma")[0] for cell, syns in self.outputs]
+        rec1 = [cell.filter_secs("soma")[0] for cell in self.outputs]
         rec2 = [cell.filter_secs("soma")[0] for cell in self.motor_output]
         self.rec_out = Record(rec1 + rec2, locs=0.5, variables='v')
 
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
 
+    def _build_network(self, input_cell_num, output_cell_num, input_size):
+        # Helper function
+        def add_mechs(cell):
+            cell.make_soma_mechanisms()
+            cell.make_apical_mechanisms(sections='dend head neck')
+
+        # INPUTS
+        input_pop = InputPopulation()
+        self.inputs = input_pop.create(input_cell_num)
+        self.observation_syns = input_pop.connect(sources=None, syn_num_per_source=round(input_size / input_cell_num), delay=1, weight=0.01,
+                                                  random_weight=True, rule='one')
+        input_pop.add_mechs(single_cell_mechs=add_mechs)
+
+        # OUTPUTS
+        output_pop = OutputPopulation()
+        self.outputs = output_pop.create(output_cell_num)
+        syns = output_pop.connect(sources=input_pop.cells, random_weight=True, syn_num_per_source=1, delay=1, weight=0.01, rule='all')
+        for hebb, ach, da in syns:
+            self.reward_syns.append(da)
+            self.punish_syns.append(ach)
+        output_pop.add_mechs(single_cell_mechs=add_mechs)
+
+        # MOTOR
+        motor_pop = MotorPopuation()
+        self.motor_output = motor_pop.create(output_cell_num)
+        motor_pop.connect(sources=output_pop.cells, weight=0.1, rule='one')
+
     def step(self, observation=None, reward=None):
         """
         Return actions as numpy array of time of spikes in ms.
         """
+        if self.observation_syns is None or len(self.observation_syns) == 0:
+            raise LookupError("Input synapses field 'self.observation_syns' is empty, but it must match the size of observation.")
+
         if observation is not None:
             dim = observation.ndim
             if dim == 1:
@@ -86,116 +163,10 @@ class EbnerAgent:
             if not as_global_time:
                 min_time = self.sim.t - self.sim.last_runtime
                 times_of_move = np.array([i for i in times_of_move if i >= min_time])
-                #times_of_move -= min_time
+                # times_of_move -= min_time
                 times_of_move -= self.warmup
             moves.append(times_of_move)
         return moves
-
-    def _build_network(self, input_cell_num, output_cell_num, input_size):
-        # INPUTS
-        for i in range(input_cell_num):
-            cell = self._make_single_cell()
-            syns = self._make_synapse(cell, number=round(input_size / input_cell_num), delay=1, weight=0.01,
-                                      with_neuromodulation=True, is_observation=True)
-            self._add_mechs(cell)
-            self.inputs.append((cell, syns))
-
-        # OUTPUTS
-        for i in range(output_cell_num):
-            cell = self._make_single_cell()
-            syns = []
-            for c, s in self.inputs:
-                syn = self._make_synapse(cell, number=1, delay=1, source=c.filter_secs("soma")[0], source_loc=0.5,
-                                         weight=0.01)
-                syns.append(syn)
-            self._add_mechs(cell)
-            self.outputs.append((cell, syns))
-
-        # MOTORS
-        self._make_motor_output(weight=0.1)
-
-    @staticmethod
-    def _make_single_cell():
-        cell = Ebner2019AChDACell("input_cell",
-                                  compile_paths="agents/utils/mods/ebner2019 agents/utils/mods/4p_ach_da_syns")
-        cell.make_sec("soma", diam=20, l=20, nseg=10)
-        cell.make_sec("dend", diam=8, l=500, nseg=100)
-        cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
-        return cell
-
-    @staticmethod
-    def _add_mechs(cell):
-        # Add mechanisms
-        cell.make_soma_mechanisms()
-        cell.make_apical_mechanisms(sections='dend head neck')
-
-    def _make_synapse(self, cell, number, delay, weight, random_weight=True, source=None, source_loc=None,
-                      with_neuromodulation=True, is_observation=False):
-        """
-
-        :param cell:
-        :param number:
-        :param delay:
-        :param weight:
-        :param synapse_type:
-            'exc' or 'inh'
-        :param random_weight:
-        :param source:
-        :param source_loc:
-        :param with_neuromodulation:
-        :return:
-        """
-        if with_neuromodulation:
-            mod = "Syn4PAChDa"
-        else:
-            mod = "Syn4P"
-        syn_4p, heads = cell.make_spine_with_synapse(source=source, number=number, mod_name=mod,
-                                                     weight=weight, rand_weight=random_weight, delay=delay, **cell.params_4p_syn,
-                                                     source_loc=source_loc)
-        if is_observation:
-            self.observation_syns.extend(syn_4p)
-
-        # Da is 10x of ACh
-        if with_neuromodulation:
-            syn_ach = cell.make_sypanses(source=None, weight=weight, mod_name="SynACh", sec=heads, delay=delay)
-            syn_da = cell.make_sypanses(source=None, weight=weight*10, mod_name="SynDa", sec=heads, delay=delay)
-            cell.set_synaptic_pointers(syn_4p, syn_ach, syn_da)
-            syns = list(zip(syn_4p, syn_ach, syn_da))
-        else:
-            syns = syn_4p
-        return syns
-
-    def _make_motor_output(self, weight):
-        """
-        Make output for agent's motor/muscle
-        """
-        for i, (cell, syns) in enumerate(self.outputs):
-            sec = cell.filter_secs("soma")[0]
-            c = Cell("output%s" % i)
-            s = c.make_sec("soma", diam=5, l=5, nseg=1)
-            c.insert("hh")
-            c.insert("pas")
-            c.make_sypanses(source=sec, weight=weight, mod_name="ExpSyn", sec=[s], source_loc=0.5,
-                            target_loc=0.5, threshold=10, e=40, tau=3, delay=3)
-            c.make_spike_detector()
-            self.motor_output.append(c)
-
-    def _get_poisson_stim(self, single_input_value):
-        stim_num = 0
-        stim_int = 0
-        if single_input_value > 0:
-            stim_num = np.random.poisson(self.max_stim_per_stepsize, 1)[0]
-            if stim_num > 0:
-                stim_int = self.stepsize/stim_num
-        return stim_num, stim_int
-
-    def make_reward(self, reward):
-        if reward > 0:
-            for s in self.reward_syns:
-                s.make_event(1)
-        elif reward < 0:
-            for s in self.punish_syns:
-                s.make_event(1)
 
     def _make_1d_observation(self, observation, syns):
         for obs, syn in zip(observation, syns):
@@ -229,11 +200,28 @@ class EbnerAgent:
             y_stride = y_window
 
         syn_last_i = 0
-        for x in range(0, x_shape+x_stride, x_stride):
-            for y in range(0, y_shape+y_stride, y_stride):
-                window = observation[y:y+y_window, x:x+x_window]
+        for x in range(0, x_shape + x_stride, x_stride):
+            for y in range(0, y_shape + y_stride, y_stride):
+                window = observation[y:y + y_window, x:x + x_window]
                 if np.sum(window) > 0:
                     if window.size == 0:
                         continue
-                    self._make_1d_observation(observation=window.flatten(), syns=syns[syn_last_i:syn_last_i+window.size])
+                    self._make_1d_observation(observation=window.flatten(), syns=syns[syn_last_i:syn_last_i + window.size])
                 syn_last_i += window.size
+
+    def make_reward(self, reward):
+        if reward > 0:
+            for s in self.reward_syns:
+                s.make_event(1)
+        elif reward < 0:
+            for s in self.punish_syns:
+                s.make_event(1)
+
+    def _get_poisson_stim(self, single_input_value):
+        stim_num = 0
+        stim_int = 0
+        if single_input_value > 0:
+            stim_num = np.random.poisson(self.max_stim_per_stepsize, 1)[0]
+            if stim_num > 0:
+                stim_int = self.stepsize / stim_num
+        return stim_num, stim_int
