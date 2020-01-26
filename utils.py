@@ -83,7 +83,7 @@ def prepare_pong_observation(obs, ratio, show=False):
         #plt.imshow(obs, vmin=0, vmax=1)
         #plt.show()
 
-    obs = np.reshape(obs, [obs.shape[0] * obs.shape[1]])
+    #obs = np.reshape(obs, [obs.shape[0] * obs.shape[1]])  # flatten
     return obs
 
 

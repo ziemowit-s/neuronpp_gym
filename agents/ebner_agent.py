@@ -1,3 +1,5 @@
+from math import ceil
+
 import numpy as np
 from neuron import h
 from neuronpp.cells.cell import Cell
@@ -55,7 +57,13 @@ class EbnerAgent:
         Return actions as numpy array of time of spikes in ms.
         """
         if observation is not None:
-            self._make_observation(observation)
+            dim = observation.ndim
+            if dim == 1:
+                self._make_1d_observation(observation, syns=self.observation_syns)
+            elif dim == 2:
+                self._make_2d_observation(observation, syns=self.observation_syns)
+            else:
+                raise RuntimeError("Observation can be 1D or 2D, but provided %sD" % dim)
         if reward is not None and reward != 0:
             self.make_reward(reward)
 
@@ -189,11 +197,43 @@ class EbnerAgent:
             for s in self.punish_syns:
                 s.make_event(1)
 
-    def _make_observation(self, observation):
-        for obs, syn in zip(observation, self.observation_syns):
+    def _make_1d_observation(self, observation, syns):
+        for obs, syn in zip(observation, syns):
             if obs > 0:
                 stim_num, interval = self._get_poisson_stim(obs)
                 next_event = 0
                 for e in range(stim_num):
                     syn.make_event(next_event)
                     next_event += interval
+
+    def _make_2d_observation(self, observation, syns, x_stride: int = None, y_stride: int = None):
+        """
+
+        :param observation:
+        :param syns:
+        :param x_stride:
+            If None - will be of x_window size
+        :param y_stride:
+            If None - will be of y_window size
+        :return:
+        """
+        inp_len = len(self.inputs)
+        x_shape = observation.shape[1]
+        y_shape = observation.shape[0]
+
+        x_window = int(np.ceil(x_shape / inp_len))
+        y_window = int(np.ceil(y_shape / inp_len))
+        if x_stride is None:
+            x_stride = x_window
+        if y_stride is None:
+            y_stride = y_window
+
+        syn_last_i = 0
+        for x in range(0, x_shape+x_stride, x_stride):
+            for y in range(0, y_shape+y_stride, y_stride):
+                window = observation[y:y+y_window, x:x+x_window]
+                if np.sum(window) > 0:
+                    if window.size == 0:
+                        continue
+                    self._make_1d_observation(observation=window.flatten(), syns=syns[syn_last_i:syn_last_i+window.size])
+                syn_last_i += window.size

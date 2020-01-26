@@ -39,4 +39,14 @@ Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
     ```bash
     python compile_mod.py -source agents/utils/mods/4p_ach_da_syns agents/utils/mods/ebner2019 agents/utils/mods/neuron_commons -target .
     ``` 
+    
+### Known issues:
+
+* After a long run it may terminate with:
+```bash
+terminate called after throwing an instance of 'std::bad_alloc'
+  what():  std::bad_alloc
+
+Process finished with exit code 134 (interrupted by signal 6: SIGABRT)
+```
 
