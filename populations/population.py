@@ -1,6 +1,7 @@
 import abc
 
 from neuronpp.cells.cell import Cell
+from neuronpp.utils.record import Record
 
 
 class Population:
@@ -8,6 +9,7 @@ class Population:
         self.cell_counter = 0
         self.cells = []
         self.syns = []
+        self.recs = {}
 
     def create(self, cell_num, **kwargs):
         result = []
@@ -58,6 +60,28 @@ class Population:
 
         self.syns.extend(result)
         return result
+
+    def record(self, sec_name="soma", loc=0.5, variable='v'):
+        d = [cell.filter_secs(sec_name)[0] for cell in self.cells]
+        rec = Record(d, locs=loc, variables=variable)
+        self.recs[variable] = rec
+
+    def plot(self, steps=10000, y_lim=(-80, 50), position=None):
+        """
+        Plots each recorded variable for each neurons in the population.
+
+        :param steps:
+            how many timesteps to see on the graph
+        :param y_lim:
+            tuple of limits for y axis. Default is (-80, 50)
+        :param position:
+            position of all subplots ON EACH figure (each figure is created for each variable separately).
+            * position=(3,3) -> if you have 9 neurons and want to display 'v' on 3x3 matrix
+            * position='merge' -> it will display all figures on the same graph.
+            * position=None -> Default, each neuron has separated  axis (row) on the figure.
+        """
+        for r in self.recs.values():
+            r.plot(steps=steps, y_lim=y_lim, position=position)
 
     def _conn(self, source_cell, sec_name, cell, loc, **kwargs):
         if source_cell is None:

@@ -2,7 +2,7 @@ import time
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
-SCREEN_RATIO = 0.2
+SCREEN_RATIO = 0.1
 AGENT_STEPSIZE = 3
 ENV_STEPSIZE = 3
 ENV_STEPSIZE = ENV_STEPSIZE/1000
