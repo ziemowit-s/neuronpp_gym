@@ -1,5 +1,4 @@
 import numpy as np
-from neuron import h
 
 from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
@@ -7,6 +6,8 @@ from neuronpp.utils.run_sim import RunSim
 from populations.input_population import InputPopulation
 from populations.motor_population import MotorPopuation
 from populations.output_population import OutputPopulation
+
+WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
 class EbnerAgent:
@@ -37,11 +38,11 @@ class EbnerAgent:
 
         # Create v records
         rec0 = [cell.filter_secs("soma")[0] for cell in self.inputs]
-        self.rec_in = Record(rec0, locs=0.5, variables='v')
+        self.rec_in = Record(rec0, loc=0.5, variables='v')
 
         rec1 = [cell.filter_secs("soma")[0] for cell in self.outputs]
         rec2 = [cell.filter_secs("soma")[0] for cell in self.motor_output]
-        self.rec_out = Record(rec1 + rec2, locs=0.5, variables='v')
+        self.rec_out = Record(rec1 + rec2, loc=0.5, variables='v')
 
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
@@ -63,7 +64,7 @@ class EbnerAgent:
         output_pop = OutputPopulation("out")
         self.outputs = output_pop.create(output_cell_num)
         syns = output_pop.connect(source=input_pop.cells, random_weight=random_weight, syn_num_per_source=1,
-                                  delay=1, weight=0.01, rule='all')
+                                  delay=1, weight=0.01, neuromodulatory_weight=0.1, rule='all')
         output_pop.add_mechs(single_cell_mechs=add_mechs)
 
         # Prepare synapses for reward and punish
