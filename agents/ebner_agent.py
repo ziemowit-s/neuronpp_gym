@@ -53,25 +53,28 @@ class EbnerAgent:
             cell.make_apical_mechanisms(sections='dend head neck')
 
         # INPUTS
-        input_pop = InputPopulation()
+        input_pop = InputPopulation("inp")
         self.inputs = input_pop.create(input_cell_num)
-        self.observation_syns = input_pop.connect(sources=None, syn_num_per_source=self.input_syn_per_cell, delay=1, weight=0.01,
-                                                  random_weight=random_weight, rule='one')
+        self.observation_syns = input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
+                                                  delay=1, weight=0.01, random_weight=random_weight, rule='one')
         input_pop.add_mechs(single_cell_mechs=add_mechs)
 
         # OUTPUTS
-        output_pop = OutputPopulation()
+        output_pop = OutputPopulation("out")
         self.outputs = output_pop.create(output_cell_num)
-        syns = output_pop.connect(sources=input_pop.cells, random_weight=random_weight, syn_num_per_source=1, delay=1, weight=0.01, rule='all')
+        syns = output_pop.connect(source=input_pop.cells, random_weight=random_weight, syn_num_per_source=1,
+                                  delay=1, weight=0.01, rule='all')
+        output_pop.add_mechs(single_cell_mechs=add_mechs)
+
+        # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
             self.reward_syns.append(da)
             self.punish_syns.append(ach)
-        output_pop.add_mechs(single_cell_mechs=add_mechs)
 
         # MOTOR
-        motor_pop = MotorPopuation()
+        motor_pop = MotorPopuation("mot")
         self.motor_output = motor_pop.create(output_cell_num)
-        motor_pop.connect(sources=output_pop.cells, weight=0.1, rule='one')
+        motor_pop.connect(source=output_pop.cells, weight=0.1, rule='one')
 
     def step(self, observation=None, reward=None):
         """
