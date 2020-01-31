@@ -11,6 +11,7 @@ class InputPopulation(Population):
         cell.make_sec("soma", diam=20, l=20, nseg=10)
         cell.make_sec("dend", diam=8, l=500, nseg=100)
         cell.connect_secs(source="dend", target="soma", source_loc=0, target_loc=1)
+        cell.make_default_mechanisms()
         return cell
 
     def make_conn(self, cell: Ebner2019Cell, source, source_loc=None, syn_num_per_source=1, delay=1, weight=1,

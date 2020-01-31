@@ -1,7 +1,5 @@
 import time
 
-from neuronpp.utils.utils import key_release_listener
-
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
@@ -17,9 +15,6 @@ key_pressed = ['']
 def key_pressed_func(key):
     print(key)
     key_pressed[0] = key
-
-
-key_release_listener(key_pressed_func)
 
 
 if __name__ == '__main__':
