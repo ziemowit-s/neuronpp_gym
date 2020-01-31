@@ -1,5 +1,4 @@
 import time
-
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
@@ -21,8 +20,7 @@ if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
     agent = EbnerAgent(input_cell_num=16, input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE,
-                       warmup=200,
-                       random_weight=True)
+                       warmup=200, random_weight=True)
     print('input_size', input_size)
 
     agent_compute_time = 0
@@ -73,6 +71,6 @@ if __name__ == '__main__':
             agent_compute_time = time.time()
 
         # plot output neurons
-        # agent.rec_in.plot(position=(4, 4))
+        #agent.rec_in.plot(animate=True, position=(4, 4))
         # plot input neurons
         # agent.rec_out.plot(position=(2, 2))
