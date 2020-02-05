@@ -23,7 +23,7 @@ key_release_listener(key_pressed_func)
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = EbnerAgent(input_cell_num=25, input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE,
+    agent = EbnerAgent(input_cell_num=16, input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE,
                        warmup=200, random_weight=True)
     print('input_size', input_size)
 
