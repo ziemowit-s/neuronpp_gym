@@ -3,9 +3,9 @@ import numpy as np
 from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
 
-from populations.input_population import InputPopulation
+from populations.hebbian_population import HebbianPopulation
 from populations.motor_population import MotorPopuation
-from populations.output_population import OutputPopulation
+from populations.hebbian_modulatory_population import HebbianModulatoryPopulation
 
 WEIGHT = 0.0035  # From Ebner et al. 2019
 
@@ -47,35 +47,47 @@ class EbnerAgent:
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
 
-    def _build_network(self, input_cell_num, output_cell_num, random_weight):
-        # Helper function
-        def add_mechs(cell):
-            cell.make_soma_mechanisms()
-            cell.make_apical_mechanisms(sections='dend head neck')
+    # Helper function
+    def _add_mechs(self, cell):
+        cell.make_soma_mechanisms()
+        cell.make_apical_mechanisms(sections='dend head neck')
 
-        # INPUTS
-        input_pop = InputPopulation("inp")
-        self.inputs = input_pop.create(input_cell_num)
-        self.observation_syns = input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
-                                                  delay=1, weight=0.01, random_weight=random_weight, rule='one')
-        input_pop.add_mechs(single_cell_mechs=add_mechs)
-
-        # OUTPUTS
-        output_pop = OutputPopulation("out")
-        self.outputs = output_pop.create(output_cell_num)
-        syns = output_pop.connect(source=input_pop.cells, random_weight=random_weight, syn_num_per_source=1,
-                                  delay=1, weight=0.01, neuromodulatory_weight=0.1, rule='all')
-        output_pop.add_mechs(single_cell_mechs=add_mechs)
+    def _make_population(self, name, clazz, cell_num, source=None, random_weight=True):
+        pop = clazz(name)
+        self.outputs = pop.create(cell_num)
+        syns = pop.connect(source=source, random_weight=random_weight, syn_num_per_source=1,
+                           delay=1, weight=0.01, neuromodulatory_weight=0.1, rule='all')
 
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
             self.reward_syns.append(da)
             self.punish_syns.append(ach)
 
+        return pop
+
+    def _build_network(self, input_cell_num, output_cell_num, random_weight):
+
+        # INPUTS
+        input_pop = HebbianPopulation("inp")
+        self.inputs = input_pop.create(input_cell_num)
+        self.observation_syns = input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
+                                                  delay=1, weight=0.01, random_weight=random_weight, rule='one')
+        input_pop.add_mechs(single_cell_mechs=self._add_mechs)
+
+        # HIDDEN
+        #hidden = self._make_population("hid", clazz=HebbianModulatoryPopulation, cell_num=3,
+        #                               source=input_pop, random_weight=random_weight)
+        #hidden.add_mechs(single_cell_mechs=self._add_mechs)
+
+        # OUTPUTS
+        output_pop = self._make_population("out", clazz=HebbianModulatoryPopulation, cell_num=output_cell_num,
+                                           source=input_pop, random_weight=random_weight)
+        output_pop.add_mechs(single_cell_mechs=self._add_mechs)
+
         # MOTOR
         motor_pop = MotorPopuation("mot")
         self.motor_output = motor_pop.create(output_cell_num)
-        motor_pop.connect(source=output_pop.cells, weight=0.1, rule='one')
+        motor_pop.connect(source=output_pop, weight=0.1, rule='one')
 
     def step(self, observation=None, reward=None):
         """

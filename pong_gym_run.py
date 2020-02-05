@@ -1,4 +1,7 @@
 import time
+import numpy as np
+from neuronpp.utils.utils import key_release_listener
+
 from agents.ebner_agent import EbnerAgent
 from utils import get_env, prepare_pong_observation, reset
 
@@ -15,11 +18,12 @@ def key_pressed_func(key):
     print(key)
     key_pressed[0] = key
 
+key_release_listener(key_pressed_func)
 
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = EbnerAgent(input_cell_num=16, input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE,
+    agent = EbnerAgent(input_cell_num=25, input_size=input_size, output_size=2, max_hz=300, stepsize=AGENT_STEPSIZE,
                        warmup=200, random_weight=True)
     print('input_size', input_size)
 
@@ -49,6 +53,7 @@ if __name__ == '__main__':
 
         # Reward for single move
         if key_pressed[0] == 'w':
+            print('w')
             agent.make_reward(1)
             key_pressed[0] = ''
 
@@ -61,7 +66,7 @@ if __name__ == '__main__':
             down_moves = new_moves[1]
             # print moves
             if len(up_moves) > 0 or len(down_moves) > 0:
-                print("up:", up_moves, "down:", down_moves)
+                print("up:", np.round(up_moves/1000, 4), "down:", np.round(down_moves/1000, 4))
 
                 # extend moves list with new moves
                 new_moves = sorted([(2, m) for m in up_moves] + [(3, m) for m in down_moves], key=lambda x: x[1])

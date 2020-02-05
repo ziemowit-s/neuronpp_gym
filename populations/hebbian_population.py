@@ -3,7 +3,7 @@ from neuronpp.cells.ebner2019_cell import Ebner2019Cell
 from neuronpp.core.populations.population import Population
 
 
-class InputPopulation(Population):
+class HebbianPopulation(Population):
 
     def make_cell(self, **kwargs) -> Cell:
         name = "input_cell%s" % self.cell_counter
