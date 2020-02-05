@@ -2,12 +2,15 @@ Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
 
 ## Prerequisites
 
-* Install requirements.txt
-* Install NEURON
+* Python 3.6
 
-* Install NEURON++ Python library
+* Install requirements.txt
+
+* Install NEURON from the instruction: https://github.com/ziemowit-s/neuron_netpyne_get_started
+
+* Install OpenAI Gym Atari environments
     ```bash
-    pip install -U git+https://github.com/ziemowit-s/neuronpp
+    pip install gym[atari]
     ```
 
 ## MOD compilation
