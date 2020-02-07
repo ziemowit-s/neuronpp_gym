@@ -11,17 +11,17 @@ WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
 class EbnerAgent:
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, random_weight=False, stepsize=20, warmup=200):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, random_weight=False, default_stepsize=20, warmup=200):
         """
         :param input_cell_num:
         :param input_size:
         :param output_size:
         :param max_hz:
-        :param stepsize:
+        :param default_stepsize:
         :param warmup:
         """
-        self.stepsize = stepsize
-        self.max_stim_per_stepsize = (stepsize * max_hz) / 1000
+        self.default_stepsize = default_stepsize
+        self.max_stim_per_stepsize = (default_stepsize * max_hz) / 1000
         self.max_hz = max_hz
         self.input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
 
@@ -89,7 +89,7 @@ class EbnerAgent:
         self.motor_output = motor_pop.create(output_cell_num)
         motor_pop.connect(source=output_pop, weight=0.1, rule='one')
 
-    def step(self, observation=None, reward=None):
+    def step(self, observation=None, reward=None, stepsize=None):
         """
         Return actions as numpy array of time of spikes in ms.
         """
@@ -108,7 +108,9 @@ class EbnerAgent:
             self.make_reward(reward)
 
         # Run
-        self.sim.run(self.stepsize)
+        if stepsize is None:
+            stepsize = self.default_stepsize
+        self.sim.run(stepsize)
 
         # Return actions as time of spikes in ms
         return self.get_motor_output_spike_times(as_global_time=False)
@@ -185,5 +187,5 @@ class EbnerAgent:
         if single_input_value > 0:
             stim_num = np.random.poisson(self.max_stim_per_stepsize, 1)[0]
             if stim_num > 0:
-                stim_int = self.stepsize / stim_num
+                stim_int = self.default_stepsize / stim_num
         return stim_num, stim_int

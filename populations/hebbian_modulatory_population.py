@@ -7,7 +7,7 @@ class HebbianModulatoryPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
         name = "input_cell%s" % self.cell_counter
-        cell = Ebner2019AChDACell(name, compile_paths="agents/utils/mods/ebner2019 agents/utils/mods/4p_ach_da_syns")
+        cell = Ebner2019AChDACell(name, compile_paths="agents/commons/mods/ebner2019 agents/commons/mods/4p_ach_da_syns")
         cell.add_sec("soma", diam=20, l=20, nseg=10)
         cell.add_sec("apic", diam=2, l=50, nseg=100)
         cell.connect_secs(source="apic", target="soma", source_loc=0, target_loc=1)
