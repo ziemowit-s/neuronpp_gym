@@ -23,8 +23,8 @@ class HebbianModulatoryPopulation(Population):
         syns_ach = []
         syns_da = []
         for s, h in zip(syns_4p, heads):
-            syn_ach = cell.add_sypanse(source=None, mod_name="SynACh", sec=h(1.0), weight=neuromodulatory_weight, delay=1)
-            syn_da = cell.add_sypanse(source=None, mod_name="SynDa", sec=h(1.0), weight=0.1, delay=1)
+            syn_ach = cell.add_sypanse(source=None, mod_name="SynACh", seg=h(1.0), weight=neuromodulatory_weight, delay=1)
+            syn_da = cell.add_sypanse(source=None, mod_name="SynDa", seg=h(1.0), weight=0.1, delay=1)
             cell.set_synaptic_pointers(s, syn_ach, syn_da)
             syns_ach.append(syn_ach)
             syns_da.append(syn_da)

@@ -14,5 +14,5 @@ class MotorPopuation(Population):
 
     def syn_definition(self, cell: Cell, source, weight=1, **kwargs) -> list:
         soma = cell.filter_secs("soma")
-        syns = cell.add_sypanse(source=source, weight=weight, mod_name="ExpSyn", sec=soma(0.5), threshold=10, e=40, tau=3, delay=3)
+        syns = cell.add_sypanse(source=source, weight=weight, mod_name="ExpSyn", seg=soma(0.5), threshold=10, e=40, tau=3, delay=3)
         return syns
