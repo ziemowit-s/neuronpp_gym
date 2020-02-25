@@ -3,6 +3,7 @@ import numpy as np
 from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
 
+from agents.agent import Agent
 from populations.hebbian_population import HebbianPopulation
 from populations.motor_population import MotorPopuation
 from populations.hebbian_modulatory_population import HebbianModulatoryPopulation
@@ -10,7 +11,7 @@ from populations.hebbian_modulatory_population import HebbianModulatoryPopulatio
 WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
-class EbnerAgent:
+class EbnerAgent(Agent):
     def __init__(self, input_cell_num, input_size, output_size, max_hz, random_weight=False, default_stepsize=20, warmup=200):
         """
         :param input_cell_num:
@@ -37,12 +38,12 @@ class EbnerAgent:
         self.warmup = warmup
 
         # Create v records
-        rec0 = [cell.filter_secs("soma") for cell in self.inputs]
-        self.rec_in = Record(rec0, loc=0.5, variables='v')
+        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.inputs]
+        self.rec_in = Record(rec0, variables='v')
 
-        rec1 = [cell.filter_secs("soma") for cell in self.outputs]
-        rec2 = [cell.filter_secs("soma") for cell in self.motor_output]
-        self.rec_out = Record(rec1 + rec2, loc=0.5, variables='v')
+        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.outputs]
+        rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_output]
+        self.rec_out = Record(rec1 + rec2, variables='v')
 
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
