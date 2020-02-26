@@ -26,9 +26,10 @@ class OlfactoryAgent:
         self.max_hz = max_hz
         self.input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
 
-        self.inputs = []
-        self.outputs = []
-        self.motor_output = []
+        self.cells = []
+        self.input_cells = []
+        self.output_cells = []
+        self.motor_cells = []
 
         self.reward_syns = []
         self.punish_syns = []
@@ -38,11 +39,11 @@ class OlfactoryAgent:
         self.warmup = warmup
 
         # Create v records
-        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.inputs]
+        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
         self.rec_in = Record(rec0, variables='v')
 
-        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.outputs]
-        rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_output]
+        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
+        rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_cells]
         self.rec_out = Record(rec1 + rec2, variables='v')
 
         # init and warmup
@@ -50,7 +51,9 @@ class OlfactoryAgent:
 
     def _make_population(self, name, clazz, cell_num, source=None, random_weight=True):
         pop = clazz(name)
-        outputs = pop.create(cell_num)
+        cells = pop.create(cell_num)
+        self.cells.extend(cells)
+
         syns = pop.connect(source=source, random_weight=random_weight, syn_num_per_source=1,
                            delay=1, weight=0.01, rule='all')
         # Prepare synapses for reward and punish
@@ -60,14 +63,13 @@ class OlfactoryAgent:
 
         return pop
 
-    def get_cells(self):
-        return self.input_pop.cells + self.hidden_pop.cells + self.output_pop.cells + self.motor_pop.cells
-
     def _build_network(self, input_cell_num, output_cell_num, random_weight):
 
         # INPUTS
         self.input_pop = Sigma3HebbianPopulation("inp")
-        self.inputs = self.input_pop.create(input_cell_num)
+        self.input_cells = self.input_pop.create(input_cell_num)
+        self.cells.extend(self.input_cells)
+
         self.observation_syns = self.input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
                                                        delay=1, weight=0.01, random_weight=random_weight, rule='one')
         # HIDDEN
@@ -75,13 +77,16 @@ class OlfactoryAgent:
                                                 source=self.input_pop, random_weight=random_weight)
         # INHIBITORY NFB
         for i in range(4):
-            self.inhibitory_cells(self.hidden_pop.cells[i:i + 3])
+            self._make_inhibitory_cells(self.hidden_pop.cells[i:i + 3])
+
         # OUTPUTS
         self.output_pop = self._make_population("out", clazz=Sigma3HebbianPopulation, cell_num=output_cell_num,
                                                 source=self.hidden_pop, random_weight=random_weight)
         # MOTOR
         self.motor_pop = MotorPopulation("mot")
-        self.motor_output = self.motor_pop.create(output_cell_num)
+        self.motor_cells = self.motor_pop.create(output_cell_num)
+        self.cells.extend(self.motor_cells)
+
         self.motor_pop.connect(source=self.output_pop, weight=0.1, rule='one')
 
     def step(self, observation=None, reward=None, stepsize=None):
@@ -118,7 +123,7 @@ class OlfactoryAgent:
             Spike times of dummy cells representing motor output stimulation which produce action for dummy motors
         """
         moves = []
-        for o in self.motor_output:
+        for o in self.motor_cells:
             times_of_move = o.get_spikes()
             if not as_global_time:
                 min_time = self.sim.t - self.sim.last_runtime
@@ -147,7 +152,7 @@ class OlfactoryAgent:
             If None - will be of y_window size
         :return:
         """
-        div = np.sqrt(len(self.inputs))
+        div = np.sqrt(len(self.input_cells))
         x_shape = observation.shape[1]
         y_shape = observation.shape[0]
 
@@ -184,9 +189,9 @@ class OlfactoryAgent:
                 stim_int = self.default_stepsize / stim_num
         return stim_num, stim_int
 
-    @staticmethod
-    def inhibitory_cells(sources):
+    def _make_inhibitory_cells(self, sources):
         cell = Cell('inh', compile_paths="agents/commons/mods/sigma3syn")
+        self.cells.append(cell)
         soma = cell.add_sec("soma", diam=5, l=5, nseg=1)
         cell.insert('pas')
         cell.insert('hh')
