@@ -55,12 +55,13 @@ class OlfactoryAgent:
                            delay=1, weight=0.01, rule='all')
         # Prepare synapses for reward and punish
         # for hebb, ach, da in [s for slist in syns for s in slist]:
-            # self.reward_syns.append(da)
-            # self.punish_syns.append(ach)
+        # self.reward_syns.append(da)
+        # self.punish_syns.append(ach)
 
         return pop
+
     def get_cells(self):
-        return self.input_pop.cells+self.hidden_pop.cells+self.output_pop.cells+self.motor_pop.cells
+        return self.input_pop.cells + self.hidden_pop.cells + self.output_pop.cells + self.motor_pop.cells
 
     def _build_network(self, input_cell_num, output_cell_num, random_weight):
 
@@ -74,7 +75,7 @@ class OlfactoryAgent:
                                                 source=self.input_pop, random_weight=random_weight)
         # INHIBITORY NFB
         for i in range(4):
-            self.inhibitory_cells(self.hidden_pop.cells[i:i+3])
+            self.inhibitory_cells(self.hidden_pop.cells[i:i + 3])
         # OUTPUTS
         self.output_pop = self._make_population("out", clazz=Sigma3HebbianPopulation, cell_num=output_cell_num,
                                                 source=self.hidden_pop, random_weight=random_weight)
@@ -83,18 +84,6 @@ class OlfactoryAgent:
         self.motor_output = self.motor_pop.create(output_cell_num)
         self.motor_pop.connect(source=self.output_pop, weight=0.1, rule='one')
 
-    def inhibitory_cells(self, sources):
-        cell = Cell('inh', compile_paths="agents/commons/mods/sigma3syn")
-        soma = cell.add_sec("soma", diam=5, l=5, nseg=1)
-        cell.insert('pas')
-        cell.insert('hh')
-        w = 0.003  # LTP
-        for source in sources:
-            cell.add_sypanse(source=source.filter_secs('soma')(0.5), weight=w, 
-                             seg=soma(0.5), mod_name="ExcSigma3Exp2Syn")
-            source.add_sypanse(source=cell.filter_secs('soma')(0.5), weight=w, 
-                               seg=soma(0.5), mod_name="Exp2Syn", e=-90)
-        
     def step(self, observation=None, reward=None, stepsize=None):
         """
         Return actions as numpy array of time of spikes in ms.
@@ -185,7 +174,7 @@ class OlfactoryAgent:
         elif reward < 0:
             for s in self.punish_syns:
                 s.make_event(1)
-                
+
     def _get_poisson_stim(self, single_input_value):
         stim_num = 0
         stim_int = 0
@@ -195,3 +184,15 @@ class OlfactoryAgent:
                 stim_int = self.default_stepsize / stim_num
         return stim_num, stim_int
 
+    @staticmethod
+    def inhibitory_cells(sources):
+        cell = Cell('inh', compile_paths="agents/commons/mods/sigma3syn")
+        soma = cell.add_sec("soma", diam=5, l=5, nseg=1)
+        cell.insert('pas')
+        cell.insert('hh')
+        w = 0.003  # LTP
+        for source in sources:
+            cell.add_sypanse(source=source.filter_secs('soma')(0.5), weight=w,
+                             seg=soma(0.5), mod_name="ExcSigma3Exp2Syn")
+            source.add_sypanse(source=cell.filter_secs('soma')(0.5), weight=w,
+                               seg=soma(0.5), mod_name="Exp2Syn", e=-90)
