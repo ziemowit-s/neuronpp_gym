@@ -9,7 +9,7 @@ class Agent:
     def show_connectivity_graph(self):
         cells = []
         for v in self.__dict__.values():
-            cs = self._make_connectivity(v)
+            cs = self._get_cells(v)
             cells.extend(cs)
         show_connectivity_graph(cells)
 
@@ -17,7 +17,7 @@ class Agent:
     def step(self, observation=None, reward=None):
         raise NotImplementedError()
 
-    def _make_connectivity(self, v):
+    def _get_cells(self, v):
         acc = []
         if isinstance(v, CoreCell):
             acc.append(v)
@@ -25,6 +25,6 @@ class Agent:
             acc.extend(v.cells)
         elif isinstance(v, list):
             for vv in v:
-                ac = self._make_connectivity(vv)
+                ac = self._get_cells(vv)
                 acc.extend(ac)
         return acc

@@ -4,14 +4,13 @@ from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
 from neuronpp.cells.cell import Cell
 
+from agents.agent import Agent
 from populations.sigma3_hebbian_population import Sigma3HebbianPopulation
 from populations.motor_population import MotorPopulation
 from populations.inhibitory_population import InhibitoryPopulation
 
-WEIGHT = 0.0035  # From Ebner et al. 2019
 
-
-class OlfactoryAgent:
+class OlfactoryAgent(Agent):
     def __init__(self, input_cell_num, input_size, output_size, max_hz, random_weight=False, default_stepsize=20, warmup=200):
         """
         :param input_cell_num:
@@ -77,7 +76,7 @@ class OlfactoryAgent:
                                                 source=self.input_pop, random_weight=random_weight)
         # INHIBITORY NFB
         for i in range(4):
-            self._make_inhibitory_cells(self.hidden_pop.cells[i:i + 3])
+            self._make_inhibitory_cells(num=i, sources=self.hidden_pop.cells[i:i + 3])
 
         # OUTPUTS
         self.output_pop = self._make_population("out", clazz=Sigma3HebbianPopulation, cell_num=output_cell_num,
@@ -189,8 +188,8 @@ class OlfactoryAgent:
                 stim_int = self.default_stepsize / stim_num
         return stim_num, stim_int
 
-    def _make_inhibitory_cells(self, sources):
-        cell = Cell('inh', compile_paths="agents/commons/mods/sigma3syn")
+    def _make_inhibitory_cells(self, num, sources):
+        cell = Cell('inh_%s' % num, compile_paths="agents/commons/mods/sigma3syn")
         self.cells.append(cell)
         soma = cell.add_sec("soma", diam=5, l=5, nseg=1)
         cell.insert('pas')

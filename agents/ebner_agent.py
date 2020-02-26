@@ -26,9 +26,10 @@ class EbnerAgent(Agent):
         self.max_hz = max_hz
         self.input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
 
-        self.inputs = []
-        self.outputs = []
-        self.motor_output = []
+        self.cells = []
+        self.input_cells = []
+        self.output_cells = []
+        self.motor_cells = []
 
         self.reward_syns = []
         self.punish_syns = []
@@ -38,11 +39,11 @@ class EbnerAgent(Agent):
         self.warmup = warmup
 
         # Create v records
-        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.inputs]
+        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
         self.rec_in = Record(rec0, variables='v')
 
-        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.outputs]
-        rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_output]
+        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
+        rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_cells]
         self.rec_out = Record(rec1 + rec2, variables='v')
 
         # init and warmup
@@ -55,7 +56,9 @@ class EbnerAgent(Agent):
 
     def _make_population(self, name, clazz, cell_num, source=None, random_weight=True):
         pop = clazz(name)
-        self.outputs = pop.create(cell_num)
+        self.output_cells = pop.create(cell_num)
+        self.cells.extend(self.output_cells)
+
         syns = pop.connect(source=source, random_weight=random_weight, syn_num_per_source=1,
                            delay=1, weight=0.01, neuromodulatory_weight=0.1, rule='all')
 
@@ -70,7 +73,9 @@ class EbnerAgent(Agent):
 
         # INPUTS
         input_pop = EbnerHebbianPopulation("inp")
-        self.inputs = input_pop.create(input_cell_num)
+        self.input_cells = input_pop.create(input_cell_num)
+        self.cells.extend(self.input_cells)
+
         self.observation_syns = input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
                                                   delay=1, weight=0.01, random_weight=random_weight, rule='one')
         input_pop.add_mechs(single_cell_mechs=self._add_mechs)
@@ -82,7 +87,9 @@ class EbnerAgent(Agent):
 
         # MOTOR
         motor_pop = MotorPopulation("mot")
-        self.motor_output = motor_pop.create(output_cell_num)
+        self.motor_cells = motor_pop.create(output_cell_num)
+        self.cells.extend(self.motor_cells)
+
         motor_pop.connect(source=output_pop, weight=0.1, rule='one')
 
     def step(self, observation=None, reward=None, stepsize=None):
@@ -119,7 +126,7 @@ class EbnerAgent(Agent):
             Spike times of dummy cells representing motor output stimulation which produce action for dummy motors
         """
         moves = []
-        for o in self.motor_output:
+        for o in self.motor_cells:
             times_of_move = o.get_spikes()
             if not as_global_time:
                 min_time = self.sim.t - self.sim.last_runtime
@@ -149,7 +156,7 @@ class EbnerAgent(Agent):
             If None - will be of y_window size
         :return:
         """
-        div = np.sqrt(len(self.inputs))
+        div = np.sqrt(len(self.input_cells))
         x_shape = observation.shape[1]
         y_shape = observation.shape[0]
 

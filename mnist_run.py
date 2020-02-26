@@ -26,7 +26,7 @@ agent = OlfactoryAgent(input_cell_num=32, input_size=196, output_size=3,
                        max_hz=300, default_stepsize=AGENT_STEPSIZE,
                        warmup=200, random_weight=True)
 
-show_connectivity_graph(cells=agent.cells)
+agent.show_connectivity_graph()
 # %%
 agent_compute_time = 0
 agent_observe = True
