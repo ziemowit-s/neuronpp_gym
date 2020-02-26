@@ -34,7 +34,6 @@ def show_cv2(obs):
         cv2.destroyAllWindows()
         raise GeneratorExit("OpenCV image show stopped.")
 
-
 def prepare_pong_observation(obs, ratio, show=False):
     """
     :param obs:
