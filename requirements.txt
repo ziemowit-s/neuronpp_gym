@@ -1,5 +1,5 @@
 matplotlib
-tensor
+tensorflow
 numpy
 scipy
 cython

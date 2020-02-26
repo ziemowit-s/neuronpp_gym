@@ -22,9 +22,7 @@ for i, labels in enumerate(y_train):
 x_train, y_train = x_train[index_list], y_train[index_list]
 obj = plt.imshow(x_train[0])
 
-agent = OlfactoryAgent(input_cell_num=32, input_size=196, output_size=3,
-                       max_hz=300, default_stepsize=AGENT_STEPSIZE,
-                       warmup=200, random_weight=True)
+agent = OlfactoryAgent(input_cell_num=32, input_size=196, output_size=3, max_hz=300, default_stepsize=AGENT_STEPSIZE, warmup=200)
 
 agent.show_connectivity_graph()
 # %%

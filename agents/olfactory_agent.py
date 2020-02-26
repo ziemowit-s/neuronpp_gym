@@ -11,7 +11,7 @@ from populations.inhibitory_population import InhibitoryPopulation
 
 
 class OlfactoryAgent(Agent):
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, random_weight=False, default_stepsize=20, warmup=200):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20, warmup=200):
         """
         :param input_cell_num:
         :param input_size:
@@ -34,7 +34,7 @@ class OlfactoryAgent(Agent):
         self.punish_syns = []
         self.observation_syns = []
 
-        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, random_weight=random_weight)
+        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size)
         self.warmup = warmup
 
         # Create v records
@@ -48,12 +48,12 @@ class OlfactoryAgent(Agent):
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
 
-    def _make_population(self, name, clazz, cell_num, source=None, random_weight=True):
+    def _make_population(self, name, clazz, cell_num, source=None):
         pop = clazz(name)
         cells = pop.create(cell_num)
         self.cells.extend(cells)
 
-        syns = pop.connect(source=source, random_weight=random_weight, syn_num_per_source=1,
+        syns = pop.connect(source=source, syn_num_per_source=1,
                            delay=1, weight=0.01, rule='all')
         # Prepare synapses for reward and punish
         # for hebb, ach, da in [s for slist in syns for s in slist]:
@@ -62,7 +62,7 @@ class OlfactoryAgent(Agent):
 
         return pop
 
-    def _build_network(self, input_cell_num, output_cell_num, random_weight):
+    def _build_network(self, input_cell_num, output_cell_num):
 
         # INPUTS
         self.input_pop = Sigma3HebbianPopulation("inp")
@@ -70,17 +70,16 @@ class OlfactoryAgent(Agent):
         self.cells.extend(self.input_cells)
 
         self.observation_syns = self.input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
-                                                       delay=1, weight=0.01, random_weight=random_weight, rule='one')
+                                                       delay=1, weight=0.01, rule='one')
         # HIDDEN
         self.hidden_pop = self._make_population("hid", clazz=Sigma3HebbianPopulation, cell_num=12,
-                                                source=self.input_pop, random_weight=random_weight)
+                                                source=self.input_pop)
         # INHIBITORY NFB
         for i in range(4):
             self._make_inhibitory_cells(num=i, sources=self.hidden_pop.cells[i:i + 3])
 
         # OUTPUTS
-        self.output_pop = self._make_population("out", clazz=Sigma3HebbianPopulation, cell_num=output_cell_num,
-                                                source=self.hidden_pop, random_weight=random_weight)
+        self.output_pop = self._make_population("out", clazz=Sigma3HebbianPopulation, cell_num=output_cell_num, source=self.hidden_pop)
         # MOTOR
         self.motor_pop = MotorPopulation("mot")
         self.motor_cells = self.motor_pop.create(output_cell_num)

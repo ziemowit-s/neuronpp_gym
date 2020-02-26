@@ -14,11 +14,11 @@ class EbnerHebbianModulatoryPopulation(Population):
         cell.make_default_mechanisms()
         return cell
 
-    def syn_definition(self, cell: Ebner2019AChDACell, source, syn_num_per_source=1, delay=1, weight=1, neuromodulatory_weight=0.01,
-                       random_weight=True, **kwargs):
+    def syn_definition(self, cell: Ebner2019AChDACell, source, syn_num_per_source=1, delay=1, weight=1,
+                       neuromodulatory_weight=0.01, **kwargs):
         secs = cell.filter_secs("apic")
         syns_4p, heads = cell.add_synapses_with_spine(source=source, mod_name="Syn4PAChDa", secs=secs, number=syn_num_per_source,
-                                                      weight=weight, rand_weight=random_weight, delay=delay, **kwargs)
+                                                      weight=weight, delay=delay, **kwargs)
         # Add neuromodulators
         syns_ach = []
         syns_da = []

@@ -12,7 +12,7 @@ WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
 class EbnerAgent(Agent):
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, random_weight=False, default_stepsize=20, warmup=200):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20, warmup=200):
         """
         :param input_cell_num:
         :param input_size:
@@ -35,7 +35,7 @@ class EbnerAgent(Agent):
         self.punish_syns = []
         self.observation_syns = []
 
-        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size, random_weight=random_weight)
+        self._build_network(input_cell_num=input_cell_num, output_cell_num=output_size)
         self.warmup = warmup
 
         # Create v records
@@ -54,12 +54,12 @@ class EbnerAgent(Agent):
         cell.make_soma_mechanisms()
         cell.make_apical_mechanisms(sections='dend head neck')
 
-    def _make_population(self, name, clazz, cell_num, source=None, random_weight=True):
+    def _make_population(self, name, clazz, cell_num, source=None):
         pop = clazz(name)
         self.output_cells = pop.create(cell_num)
         self.cells.extend(self.output_cells)
 
-        syns = pop.connect(source=source, random_weight=random_weight, syn_num_per_source=1,
+        syns = pop.connect(source=source, syn_num_per_source=1,
                            delay=1, weight=0.01, neuromodulatory_weight=0.1, rule='all')
 
         # Prepare synapses for reward and punish
@@ -69,20 +69,18 @@ class EbnerAgent(Agent):
 
         return pop
 
-    def _build_network(self, input_cell_num, output_cell_num, random_weight):
+    def _build_network(self, input_cell_num, output_cell_num):
 
         # INPUTS
         input_pop = EbnerHebbianPopulation("inp")
         self.input_cells = input_pop.create(input_cell_num)
         self.cells.extend(self.input_cells)
 
-        self.observation_syns = input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
-                                                  delay=1, weight=0.01, random_weight=random_weight, rule='one')
+        self.observation_syns = input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell, delay=1, weight=0.01, rule='one')
         input_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         # OUTPUTS
-        output_pop = self._make_population("out", clazz=EbnerHebbianModulatoryPopulation, cell_num=output_cell_num,
-                                           source=input_pop, random_weight=random_weight)
+        output_pop = self._make_population("out", clazz=EbnerHebbianModulatoryPopulation, cell_num=output_cell_num, source=input_pop)
         output_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         # MOTOR
