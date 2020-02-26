@@ -4,7 +4,7 @@ from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
 from neuronpp.cells.cell import Cell
 
-from populations.hebbian_population import HebbianPopulation
+from populations.sigma3_hebbian_population import Sigma3HebbianPopulation
 from populations.motor_population import MotorPopulation
 from populations.inhibitory_population import InhibitoryPopulation
 
@@ -65,18 +65,18 @@ class OlfactoryAgent:
     def _build_network(self, input_cell_num, output_cell_num, random_weight):
 
         # INPUTS
-        self.input_pop = HebbianPopulation("inp")
+        self.input_pop = Sigma3HebbianPopulation("inp")
         self.inputs = self.input_pop.create(input_cell_num)
         self.observation_syns = self.input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
                                                        delay=1, weight=0.01, random_weight=random_weight, rule='one')
         # HIDDEN
-        self.hidden_pop = self._make_population("hid", clazz=HebbianPopulation, cell_num=12,
+        self.hidden_pop = self._make_population("hid", clazz=Sigma3HebbianPopulation, cell_num=12,
                                                 source=self.input_pop, random_weight=random_weight)
         # INHIBITORY NFB
         for i in range(4):
             self.inhibitory_cells(self.hidden_pop.cells[i:i+3])
         # OUTPUTS
-        self.output_pop = self._make_population("out", clazz=HebbianPopulation, cell_num=output_cell_num,
+        self.output_pop = self._make_population("out", clazz=Sigma3HebbianPopulation, cell_num=output_cell_num,
                                                 source=self.hidden_pop, random_weight=random_weight)
         # MOTOR
         self.motor_pop = MotorPopulation("mot")

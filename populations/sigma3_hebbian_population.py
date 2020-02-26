@@ -1,9 +1,8 @@
 from neuronpp.cells.cell import Cell
-from neuronpp.cells.ebner2019_cell import Ebner2019Cell
 from neuronpp.core.populations.population import Population
 
 
-class HebbianPopulation(Population):
+class Sigma3HebbianPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
         name = "input_cell%s" % self.cell_counter

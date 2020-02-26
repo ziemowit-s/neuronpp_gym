@@ -4,9 +4,9 @@ from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
 
 from agents.agent import Agent
-from populations.hebbian_population import HebbianPopulation
-from populations.motor_population import MotorPopuation
-from populations.hebbian_modulatory_population import HebbianModulatoryPopulation
+from populations.ebner_hebbian_modulatory_population import EbnerHebbianModulatoryPopulation
+from populations.ebner_hebbian_population import EbnerHebbianPopulation
+from populations.motor_population import MotorPopulation
 
 WEIGHT = 0.0035  # From Ebner et al. 2019
 
@@ -69,24 +69,19 @@ class EbnerAgent(Agent):
     def _build_network(self, input_cell_num, output_cell_num, random_weight):
 
         # INPUTS
-        input_pop = HebbianPopulation("inp")
+        input_pop = EbnerHebbianPopulation("inp")
         self.inputs = input_pop.create(input_cell_num)
         self.observation_syns = input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
                                                   delay=1, weight=0.01, random_weight=random_weight, rule='one')
         input_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
-        # HIDDEN
-        #hidden = self._make_population("hid", clazz=HebbianModulatoryPopulation, cell_num=3,
-        #                               source=input_pop, random_weight=random_weight)
-        #hidden.add_mechs(single_cell_mechs=self._add_mechs)
-
         # OUTPUTS
-        output_pop = self._make_population("out", clazz=HebbianModulatoryPopulation, cell_num=output_cell_num,
+        output_pop = self._make_population("out", clazz=EbnerHebbianModulatoryPopulation, cell_num=output_cell_num,
                                            source=input_pop, random_weight=random_weight)
         output_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         # MOTOR
-        motor_pop = MotorPopuation("mot")
+        motor_pop = MotorPopulation("mot")
         self.motor_output = motor_pop.create(output_cell_num)
         motor_pop.connect(source=output_pop, weight=0.1, rule='one')
 
