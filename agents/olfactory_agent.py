@@ -56,12 +56,13 @@ class OlfactoryAgent(Agent):
         self.cells.extend(self.input_cells)
 
         self.observation_syns = self.input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
-                                                       delay=1, netcon_weight=0.01, rule='one')
+                                                       delay=1, random_weight_mean=1.0, netcon_weight=0.01, rule='one')
         # HIDDEN
         self.hidden_pop = self._make_modulatory_population("hid", cell_num=12, source=self.input_pop)
+
         # INHIBITORY NFB
         for i in range(4):
-            self._make_inhibitory_cells(num=i, sources=self.hidden_pop.cells[i:i + 3])
+            self._make_inhibitory_cells(counter=i, sources=self.hidden_pop.cells[i:i + 3])
 
         # OUTPUTS
         self.output_pop = self._make_modulatory_population("out", cell_num=output_cell_num, source=self.hidden_pop)
@@ -121,7 +122,7 @@ class OlfactoryAgent(Agent):
         self.cells.extend(cells)
 
         syns = pop.connect(source=source, syn_num_per_source=1,
-                           delay=1, netcon_weight=0.01, neuromodulatory_weight=0.01, rule='all')
+                           delay=1, random_weight_mean=1.0, netcon_weight=0.01, neuromodulatory_weight=0.01, rule='all')
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
             self.reward_syns.append(da)
@@ -186,8 +187,9 @@ class OlfactoryAgent(Agent):
                 stim_int = self.default_stepsize / stim_num
         return stim_num, stim_int
 
-    def _make_inhibitory_cells(self, num, sources):
-        cell = Cell('inh_%s' % num, compile_paths="agents/commons/mods/sigma3syn")
+    def _make_inhibitory_cells(self, counter, sources):
+        cell = Cell('inh', compile_paths="agents/commons/mods/sigma3syn")
+        cell.name = "Inh[%s][%s]" % (cell.name, counter)
         self.cells.append(cell)
         soma = cell.add_sec("soma", diam=5, l=5, nseg=1)
         cell.insert('pas')
