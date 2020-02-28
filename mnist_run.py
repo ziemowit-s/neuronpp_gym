@@ -22,25 +22,20 @@ for i, labels in enumerate(y_train):
 x_train, y_train = x_train[index_list], y_train[index_list]
 obj = plt.imshow(x_train[0])
 
-agent = OlfactoryAgent(input_cell_num=32, input_size=196, output_size=3, max_hz=300, default_stepsize=AGENT_STEPSIZE, warmup=200)
+agent = OlfactoryAgent(input_cell_num=16, input_size=196, output_size=3, max_hz=300, default_stepsize=AGENT_STEPSIZE, warmup=200)
+#agent.show_connectivity_graph()
+w_out = [pp.hoc.w for c in agent.output_cells for pp in c.pps]
 
-agent.show_connectivity_graph()
 # %%
 agent_compute_time = 0
 agent_observe = True
 start_time = time.time()
 
-moves = []
 reset_time = time.time()
 gain = 0
 index = 0
 reward = None
 while True:
-    if len(moves) > 0:
-        action = moves[0][0]
-        moves = moves[1:]
-    else:       
-        action = 0
     y = y_train[index]
     # result = gaussian_filter(x_train[index], sigma=4)
     obs = x_train[index, ::2, ::2]
@@ -61,13 +56,17 @@ while True:
         try:
             spikes_list[i] = spikes[0]
         except:
-            spikes_list[i] = 1000
-    if np.argmin(spikes_list) == y and np.min(spikes_list) != 1000:
+            spikes_list[i] = -1
+
+    print("spike out ms:", spikes_list)
+    print("average weight out:", np.average(w_out))
+
+    if np.argmin(spikes_list) == y and np.min(spikes_list) != -1:
         reward = 1
         print("i:", index, "reward recognized", y)
     else:
         reward = -1
-    agent.make_reward(reward=reward)
+
     # write time after agent step
     agent_compute_time = time.time()
     obj.set_data(obs)
@@ -77,6 +76,6 @@ while True:
     index += 1
 
     # plot output neurons
-    # agent.rec_in.plot(animate=True, position=(4, 4))
+    #agent.rec_in.plot(animate=True, position=(4, 4))
     # plot input neurons
-    # agent.rec_out.plot(position=(2, 2))
+    #agent.rec_out.plot(animate=True)
