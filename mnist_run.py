@@ -34,6 +34,7 @@ moves = []
 reset_time = time.time()
 gain = 0
 index = 0
+reward = None
 while True:
     if len(moves) > 0:
         action = moves[0][0]
@@ -53,7 +54,7 @@ while True:
 
     # Sent observation to the Agent every ENV_STEPSIZE ms
     # agent step
-    output = agent.step(observation=obs)
+    output = agent.step(observation=obs, reward=reward)
 
     spikes_list = np.zeros(3)
     for i, spikes in enumerate(output):

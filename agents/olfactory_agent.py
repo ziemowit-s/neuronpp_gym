@@ -7,7 +7,7 @@ from neuronpp.cells.cell import Cell
 from agents.agent import Agent
 from populations.sigma3_hebbian_population import Sigma3HebbianPopulation
 from populations.motor_population import MotorPopulation
-from populations.inhibitory_population import InhibitoryPopulation
+from populations.sigma3_modulatory_population import Sigma3ModulatoryPopulation
 
 
 class OlfactoryAgent(Agent):
@@ -48,20 +48,6 @@ class OlfactoryAgent(Agent):
         # init and warmup
         self.sim = RunSim(init_v=-70, warmup=warmup)
 
-    def _make_population(self, name, clazz, cell_num, source=None):
-        pop = clazz(name)
-        cells = pop.create(cell_num)
-        self.cells.extend(cells)
-
-        syns = pop.connect(source=source, syn_num_per_source=1,
-                           delay=1, weight=0.01, rule='all')
-        # Prepare synapses for reward and punish
-        # for hebb, ach, da in [s for slist in syns for s in slist]:
-        # self.reward_syns.append(da)
-        # self.punish_syns.append(ach)
-
-        return pop
-
     def _build_network(self, input_cell_num, output_cell_num):
 
         # INPUTS
@@ -70,22 +56,21 @@ class OlfactoryAgent(Agent):
         self.cells.extend(self.input_cells)
 
         self.observation_syns = self.input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell,
-                                                       delay=1, weight=0.01, rule='one')
+                                                       delay=1, netcon_weight=0.01, rule='one')
         # HIDDEN
-        self.hidden_pop = self._make_population("hid", clazz=Sigma3HebbianPopulation, cell_num=12,
-                                                source=self.input_pop)
+        self.hidden_pop = self._make_modulatory_population("hid", cell_num=12, source=self.input_pop)
         # INHIBITORY NFB
         for i in range(4):
             self._make_inhibitory_cells(num=i, sources=self.hidden_pop.cells[i:i + 3])
 
         # OUTPUTS
-        self.output_pop = self._make_population("out", clazz=Sigma3HebbianPopulation, cell_num=output_cell_num, source=self.hidden_pop)
+        self.output_pop = self._make_modulatory_population("out", cell_num=output_cell_num, source=self.hidden_pop)
         # MOTOR
         self.motor_pop = MotorPopulation("mot")
         self.motor_cells = self.motor_pop.create(output_cell_num)
         self.cells.extend(self.motor_cells)
 
-        self.motor_pop.connect(source=self.output_pop, weight=0.1, rule='one')
+        self.motor_pop.connect(source=self.output_pop, netcon_weight=0.1, rule='one')
 
     def step(self, observation=None, reward=None, stepsize=None):
         """
@@ -129,6 +114,20 @@ class OlfactoryAgent(Agent):
                 times_of_move -= self.warmup
             moves.append(times_of_move)
         return moves
+
+    def _make_modulatory_population(self, name, cell_num, source=None):
+        pop = Sigma3ModulatoryPopulation(name)
+        cells = pop.create(cell_num)
+        self.cells.extend(cells)
+
+        syns = pop.connect(source=source, syn_num_per_source=1,
+                           delay=1, netcon_weight=0.01, neuromodulatory_weight=0.01, rule='all')
+        # Prepare synapses for reward and punish
+        for hebb, ach, da in [s for slist in syns for s in slist]:
+            self.reward_syns.append(da)
+            self.punish_syns.append(ach)
+
+        return pop
 
     def _make_1d_observation(self, observation, syns):
         for obs, syn in zip(observation, syns):
@@ -195,7 +194,7 @@ class OlfactoryAgent(Agent):
         cell.insert('hh')
         w = 0.003  # LTP
         for source in sources:
-            cell.add_sypanse(source=source.filter_secs('soma')(0.5), weight=w,
+            cell.add_sypanse(source=source.filter_secs('soma')(0.5), netcon_weight=w,
                              seg=soma(0.5), mod_name="ExcSigma3Exp2Syn")
-            source.add_sypanse(source=cell.filter_secs('soma')(0.5), weight=w,
+            source.add_sypanse(source=cell.filter_secs('soma')(0.5), netcon_weight=w,
                                seg=soma(0.5), mod_name="Exp2Syn", e=-90)

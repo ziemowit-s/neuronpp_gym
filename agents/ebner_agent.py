@@ -11,7 +11,7 @@ from populations.motor_population import MotorPopulation
 WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
-class EbnerAgent(Agent):
+class Sigma3Agent(Agent):
     def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20, warmup=200):
         """
         :param input_cell_num:
@@ -60,7 +60,7 @@ class EbnerAgent(Agent):
         self.cells.extend(self.output_cells)
 
         syns = pop.connect(source=source, syn_num_per_source=1,
-                           delay=1, weight=0.01, neuromodulatory_weight=0.1, rule='all')
+                           delay=1, netcon_weight=0.01, neuromodulatory_weight=0.1, rule='all')
 
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
@@ -76,7 +76,8 @@ class EbnerAgent(Agent):
         self.input_cells = input_pop.create(input_cell_num)
         self.cells.extend(self.input_cells)
 
-        self.observation_syns = input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell, delay=1, weight=0.01, rule='one')
+        self.observation_syns = input_pop.connect(source=None, syn_num_per_source=self.input_syn_per_cell, delay=1,
+                                                  netcon_weight=0.01, rule='one')
         input_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         # OUTPUTS
@@ -88,7 +89,7 @@ class EbnerAgent(Agent):
         self.motor_cells = motor_pop.create(output_cell_num)
         self.cells.extend(self.motor_cells)
 
-        motor_pop.connect(source=output_pop, weight=0.1, rule='one')
+        motor_pop.connect(source=output_pop, netcon_weight=0.1, rule='one')
 
     def step(self, observation=None, reward=None, stepsize=None):
         """

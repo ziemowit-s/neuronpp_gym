@@ -1,8 +1,7 @@
 import time
-import numpy as np
 from neuronpp.utils.utils import key_release_listener
 
-from agents.ebner_agent import EbnerAgent
+from agents.olfactory_agent import OlfactoryAgent
 from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.2  # 5 ms with: screen_ratio=0.2, step_size=3; 10sec env -> 0.3 sec network
@@ -25,7 +24,7 @@ key_release_listener(key_pressed_func)
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = EbnerAgent(input_cell_num=16, input_size=input_size, output_size=2, max_hz=300, default_stepsize=AGENT_STEPSIZE, warmup=200)
+    agent = OlfactoryAgent(input_cell_num=9, input_size=input_size, output_size=2, max_hz=300, default_stepsize=AGENT_STEPSIZE, warmup=200)
     agent.show_connectivity_graph()
     print('input_size', input_size)
 

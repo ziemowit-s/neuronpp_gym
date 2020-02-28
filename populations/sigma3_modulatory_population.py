@@ -1,0 +1,38 @@
+from neuronpp.cells.cell import Cell
+from neuronpp.core.populations.population import Population
+
+
+class Sigma3ModulatoryPopulation(Population):
+
+    def cell_definition(self, **kwargs) -> Cell:
+        name = "input_cell%s" % self.cell_counter
+        cell = Cell(name, compile_paths="agents/commons/mods/sigma3syn")
+        cell.add_sec("soma", diam=20, l=20, nseg=10)
+        cell.add_sec("apic", diam=2, l=50, nseg=100)
+        cell.connect_secs(source="apic", target="soma", source_loc=0, target_loc=1)
+        cell.insert('pas')
+        cell.insert('hh')
+        return cell
+
+    def syn_definition(self, cell: Cell, source, syn_num_per_source=1, delay=1,
+                       netcon_weight=1, neuromodulatory_weight=1, **kwargs):
+        secs = cell.filter_secs("apic")
+        syns, heads = cell.add_synapses_with_spine(source=source, mod_name="ExcSigma3Exp2SynAchDa",
+                                                   secs=secs,
+                                                   number=syn_num_per_source,
+                                                   netcon_weight=netcon_weight,
+                                                   delay=delay, **kwargs)
+
+        ncs_ach = []
+        ncs_da = []
+        for syn in syns:
+            pp = syn.point_process
+            ach_netcon = cell.add_netcon(source=None, point_process=pp,
+                                         netcon_weight=neuromodulatory_weight + pp.hoc.ach_substractor, delay=1)
+            da_netcon = cell.add_netcon(source=None, point_process=syn.point_process,
+                                        netcon_weight=neuromodulatory_weight + pp.hoc.da_substractor, delay=1)
+            ncs_ach.append(ach_netcon)
+            ncs_da.append(da_netcon)
+
+        syns = list(zip(syns, ncs_ach, ncs_da))
+        return syns

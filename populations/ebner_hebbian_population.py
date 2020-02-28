@@ -14,8 +14,8 @@ class EbnerHebbianPopulation(Population):
         cell.make_default_mechanisms()
         return cell
 
-    def syn_definition(self, cell: Ebner2019Cell, source, syn_num_per_source=1, delay=1, weight=1, **kwargs):
+    def syn_definition(self, cell: Ebner2019Cell, source, syn_num_per_source=1, delay=1, netcon_weight=1, **kwargs):
         secs = cell.filter_secs("apic")
         syns_4p, heads = cell.add_synapses_with_spine(source=source, mod_name="Syn4P", secs=secs, number=syn_num_per_source,
-                                                      weight=weight, delay=delay, **kwargs)
+                                                      netcon_weight=netcon_weight, delay=delay, **kwargs)
         return syns_4p
