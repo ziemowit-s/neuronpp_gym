@@ -4,7 +4,7 @@ from agents.olfactory_agent import OlfactoryAgent
 from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.3  # 5 ms with: screen_ratio=0.2, step_size=3; 10sec env -> 0.3 sec network
-ENV_STEPSIZE = 3
+ENV_STEPSIZE = 10
 AGENT_STEPSIZE = 3
 RESET_AFTER = 24
 
@@ -13,8 +13,8 @@ ENV_STEPSIZE = ENV_STEPSIZE / 1000
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = OlfactoryAgent(input_cell_num=9, input_size=input_size, output_size=2, max_hz=300, default_stepsize=AGENT_STEPSIZE, warmup=200)
-    agent.show_connectivity_graph()
+    agent = OlfactoryAgent(input_cell_num=9, input_size=input_size, output_size=2, max_hz=100, default_stepsize=AGENT_STEPSIZE, warmup=10)
+    #agent.show_connectivity_graph()
     print('input_size', input_size)
 
     agent_compute_time = 0
@@ -70,6 +70,6 @@ if __name__ == '__main__':
             agent_compute_time = time.time()
 
         # plot output neurons
-        #agent.rec_in.plot(animate=True, position=(4, 4))
+        #agent.rec_in.plot(animate=True, position=(3, 3))
         # plot input neurons
-        # agent.rec_out.plot(position=(2, 2))
+        #agent.rec_out.plot(animate=True)

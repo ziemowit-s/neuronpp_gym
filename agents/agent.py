@@ -79,11 +79,11 @@ class Agent:
 
     def make_reward(self, reward):
         if reward > 0:
-            print('REWARD EVENT', len(self.reward_syns))
+            print('REWARD EVENT')
             for s in self.reward_syns:
                 s.make_event(1)
         elif reward < 0:
-            print('PUNISH EVENT', len(self.punish_syns))
+            print('PUNISH EVENT')
             for s in self.punish_syns:
                 s.make_event(1)
 

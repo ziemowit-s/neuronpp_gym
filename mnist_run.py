@@ -22,7 +22,7 @@ for i, labels in enumerate(y_train):
 x_train, y_train = x_train[index_list], y_train[index_list]
 obj = plt.imshow(x_train[0])
 
-agent = OlfactoryAgent(input_cell_num=16, input_size=196, output_size=3, max_hz=300, default_stepsize=AGENT_STEPSIZE, warmup=200)
+agent = OlfactoryAgent(input_cell_num=9, input_size=196, output_size=3, max_hz=100, default_stepsize=AGENT_STEPSIZE, warmup=10)
 #agent.show_connectivity_graph()
 w_out = [pp.hoc.w for c in agent.output_cells for pp in c.pps]
 
@@ -58,19 +58,17 @@ while True:
         except:
             spikes_list[i] = -1
 
-    print("spike out ms:", spikes_list)
-    print("average weight out:", np.average(w_out))
-
     if np.argmin(spikes_list) == y and np.min(spikes_list) != -1:
         reward = 1
         print("i:", index, "reward recognized", y)
     else:
         reward = -1
+    print('predict:', np.argmin(spikes_list), ' True:', y)
 
     # write time after agent step
     agent_compute_time = time.time()
     obj.set_data(obs)
-    plt.title('predict: ' + str(np.argmin(spikes_list)) + ' True: ' + str(y))
+    #plt.title('predict: ' + str(np.argmin(spikes_list)) + ' True: ' + str(y))
     plt.draw()
     plt.pause(1e-9)
     index += 1

@@ -30,14 +30,14 @@ class OlfactoryAgent(Agent):
         input_pop = Sigma3HebbianPopulation("inp")
         input_pop.create(input_cell_num)
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell,
-                          delay=1, random_weight_mean=1.0, netcon_weight=0.1, rule='one')
+                          delay=1, netcon_weight=0.01, rule='one')
         # HIDDEN
         self.hidden_pop = self._make_modulatory_population("hid", cell_num=12, source=input_pop)
         self.hidden_cells = self.hidden_pop.cells
 
         # INHIBITORY NFB
         for i in range(4):
-            self._make_inhibitory_cells(counter=i, sources=self.hidden_pop.cells[i:i + 3])
+            self._make_inhibitory_cells(counter=i, sources=self.hidden_pop.cells[i:i + 3], netcon_weight=0.03)
 
         # OUTPUTS
         output_pop = self._make_modulatory_population("out", cell_num=output_cell_num, source=self.hidden_pop)
@@ -58,7 +58,7 @@ class OlfactoryAgent(Agent):
 
         return pop
 
-    def _make_inhibitory_cells(self, counter, sources):
+    def _make_inhibitory_cells(self, counter, netcon_weight, sources):
         cell = Cell('inh', compile_paths="agents/commons/mods/sigma3syn")
         cell.name = "Inh[%s][%s]" % (cell.name, counter)
         self.inhibitory_cells.append(cell)
@@ -66,10 +66,11 @@ class OlfactoryAgent(Agent):
         soma = cell.add_sec("soma", diam=5, l=5, nseg=1)
         cell.insert('pas')
         cell.insert('hh')
-        w = 0.003  # LTP
         for source in sources:
-            cell.add_sypanse(source=source.filter_secs('soma')(0.5), netcon_weight=w, seg=soma(0.5), mod_name="ExcSigma3Exp2Syn")
-            source.add_sypanse(source=cell.filter_secs('soma')(0.5), netcon_weight=w, seg=soma(0.5), mod_name="Exp2Syn", e=-90)
+            cell.add_sypanse(source=source.filter_secs('soma')(0.5), netcon_weight=netcon_weight, seg=soma(0.5),
+                             mod_name="ExcSigma3Exp2Syn")
+            source.add_sypanse(source=cell.filter_secs('soma')(0.5), netcon_weight=netcon_weight, seg=soma(0.5),
+                               mod_name="Exp2Syn", e=-90)
 
     def _make_records(self):
         rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
