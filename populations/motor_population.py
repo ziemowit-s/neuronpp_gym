@@ -5,7 +5,7 @@ from neuronpp.core.populations.population import Population
 class MotorPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
-        cell = Cell("output")
+        cell = Cell("motor_%s" % self.cell_counter)
         cell.add_sec("soma", diam=5, l=5, nseg=1)
         cell.insert('pas')
         cell.insert('hh')

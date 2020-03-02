@@ -5,7 +5,7 @@ from neuronpp.core.populations.population import Population
 class InhibitoryPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
-        name = "input_cell%s" % self.cell_counter
+        name = "inhibitory_%s" % self.cell_counter
         cell = Cell(name)
         cell.add_sec("soma", diam=5, l=5, nseg=1)
         cell.insert('pas')

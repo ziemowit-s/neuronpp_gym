@@ -1,4 +1,3 @@
-import numpy as np
 from neuronpp.cells.cell import Cell
 from neuronpp.core.populations.population import Population
 from neuronpp.utils.utils import set_random_normal_weights
@@ -7,7 +6,7 @@ from neuronpp.utils.utils import set_random_normal_weights
 class Sigma3HebbianPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
-        name = "input_cell%s" % self.cell_counter
+        name = "Sigma3Hebbian_%s" % self.cell_counter
         cell = Cell(name, compile_paths="agents/commons/mods/sigma3syn")
         cell.add_sec("soma", diam=20, l=20, nseg=10)
         cell.add_sec("apic", diam=2, l=50, nseg=100)

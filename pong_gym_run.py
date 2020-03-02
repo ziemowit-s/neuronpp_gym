@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
     agent = OlfactoryAgent(input_cell_num=9, input_size=input_size, output_size=2, max_hz=100, default_stepsize=AGENT_STEPSIZE, warmup=10)
-    #agent.show_connectivity_graph()
+    agent.show_connectivity_graph()
     print('input_size', input_size)
 
     agent_compute_time = 0

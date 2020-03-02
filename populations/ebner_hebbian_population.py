@@ -6,7 +6,7 @@ from neuronpp.core.populations.population import Population
 class EbnerHebbianPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
-        name = "input_cell%s" % self.cell_counter
+        name = "EbnerHebbian_%s" % self.cell_counter
         cell = Ebner2019Cell(name, compile_paths="agents/commons/mods/ebner2019")
         cell.add_sec("soma", diam=20, l=20, nseg=10)
         cell.add_sec("apic", diam=2, l=50, nseg=100)
