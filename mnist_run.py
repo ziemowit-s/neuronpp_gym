@@ -3,7 +3,7 @@ import pylab as plt
 import numpy as np
 import tensorflow as tf
 from agents.olfactory_agent import OlfactoryAgent
-from neuronpp.utils.utils import show_connectivity_graph, plot_network_status
+from neuronpp.utils.plot_network_status import PlotNetworkStatus
 
 def mnist_prepare(num=3):
     mnist = tf.keras.datasets.mnist
@@ -41,7 +41,7 @@ index = 0
 reward = None
 
 cells = agent.get_cells()
-graph = plot_network_status(cells)
+graph = PlotNetworkStatus(cells)
 #%%
 while True:
     y = y_train[index]
@@ -71,11 +71,12 @@ while True:
     agent_compute_time = time.time()
     # obj.set_data(obs)
     # ax1.set_title('predict: ' + str(np.argmin(spikes_list)) + ' True: ' + str(y))
-    graph.update_spikes()
+    graph.update_spikes(agent.sim.t)
+    graph.update_weights('w')
     # plt.pause(1e-8)
     index += 1
 
     # plot output neurons
-    #agent.rec_in.plot(animate=True, position=(4, 4))
+    agent.rec_hidden.plot(animate=True, position=(4, 3))
     # plot input neurons
     #agent.rec_out.plot(animate=True)

@@ -49,7 +49,8 @@ class OlfactoryAgent(Agent):
         pop.create(cell_num)
 
         syns = pop.connect(source=source, syn_num_per_source=1,
-                           delay=1, random_weight_mean=1.0, netcon_weight=0.01, rule='all')
+                           delay=1, neuromodulatory_weight=1, 
+                           random_weight_mean=1.0, netcon_weight=0.01, rule='all')
 
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
@@ -71,10 +72,11 @@ class OlfactoryAgent(Agent):
                              mod_name="ExcSigma3Exp2Syn")
             source.add_synapse(source=cell.filter_secs('soma')(0.5), netcon_weight=netcon_weight, seg=soma(0.5),
                                mod_name="Exp2Syn", e=-90)
-
+            
     def _make_records(self):
-        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
-        self.rec_in = Record(rec0, variables='v')
-        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
-        rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_cells]
-        self.rec_out = Record(rec1 + rec2, variables='v')
+        # rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
+        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.hidden_cells]
+        self.rec_hidden = Record(rec0, variables='v')
+        # rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
+        # rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_cells]
+        # self.rec_out = Record(rec1 + rec2, variables='v')
