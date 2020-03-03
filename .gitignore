@@ -10,6 +10,7 @@ x86_64/
 */*/x86_64/
 agents/commons/mods/*/x86_64/
 agents/commons/mods/x86_64/
+compiled/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

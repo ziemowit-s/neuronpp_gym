@@ -77,4 +77,5 @@ class EbnerOlfactoryAgent(Agent):
         self.rec_in = Record(rec0, variables='v')
 
         rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
-        self.rec_out = Record(rec1, variables='v')
+        rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_cells]
+        self.rec_out = Record(rec1+rec2, variables='v')
