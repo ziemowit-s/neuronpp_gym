@@ -1,6 +1,6 @@
 import time
 
-from agents.olfactory_agent import OlfactoryAgent
+from agents.sigma3_olfactory_agent import Sigma3OlfactoryAgent
 from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.3  # 5 ms with: screen_ratio=0.2, step_size=3; 10sec env -> 0.3 sec network
@@ -13,7 +13,7 @@ ENV_STEPSIZE = ENV_STEPSIZE / 1000
 if __name__ == '__main__':
 
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = OlfactoryAgent(input_cell_num=9, input_size=input_size, output_size=2, max_hz=100, default_stepsize=AGENT_STEPSIZE, warmup=10)
+    agent = Sigma3OlfactoryAgent(input_cell_num=9, input_size=input_size, output_size=2, max_hz=100, default_stepsize=AGENT_STEPSIZE, warmup=10)
     agent.show_connectivity_graph()
     print('input_size', input_size)
 

@@ -8,7 +8,7 @@ from populations.sigma3_hebbian_population import Sigma3HebbianPopulation
 from populations.sigma3_modulatory_population import Sigma3ModulatoryPopulation
 
 
-class OlfactoryAgent(Agent):
+class Sigma3OlfactoryAgent(Agent):
     def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20, warmup=10):
         """
         :param input_cell_num:
@@ -75,6 +75,6 @@ class OlfactoryAgent(Agent):
     def _make_records(self):
         rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
         self.rec_in = Record(rec0, variables='v')
+
         rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
-        rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_cells]
-        self.rec_out = Record(rec1 + rec2, variables='v')
+        self.rec_out = Record(rec1, variables='v')

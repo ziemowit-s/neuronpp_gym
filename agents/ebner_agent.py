@@ -2,7 +2,7 @@ import numpy as np
 
 from neuronpp.utils.record import Record
 from agents.agent import Agent
-from populations.ebner_hebbian_modulatory_population import EbnerHebbianModulatoryPopulation
+from populations.ebner_modulatory_population import EbnerModulatoryPopulation
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
 
 WEIGHT = 0.0035  # From Ebner et al. 2019
@@ -40,7 +40,7 @@ class EbnerAgent(Agent):
         cell.make_apical_mechanisms(sections='dend head neck')
 
     def _make_modulatory_population(self, name, cell_num, source=None):
-        pop = EbnerHebbianModulatoryPopulation(name)
+        pop = EbnerModulatoryPopulation(name)
         self.output_cells = pop.create(cell_num)
 
         syns = pop.connect(source=source, syn_num_per_source=1,

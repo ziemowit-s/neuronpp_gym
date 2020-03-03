@@ -29,7 +29,8 @@ class Sigma3ModulatoryPopulation(Population):
                                                    netcon_weight=netcon_weight,
                                                    delay=delay, **kwargs)
         if random_weight_mean:
-            set_random_normal_weights(point_processes=[s.point_process for s in syns], mean=random_weight_mean, std=random_weight_mean)
+            set_random_normal_weights(point_processes=[s.point_process for s in syns], mean=random_weight_mean,
+                                      std=random_weight_mean)
 
         ncs_ach = []
         ncs_da = []

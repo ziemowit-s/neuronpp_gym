@@ -1,6 +1,7 @@
 from neuronpp.cells.cell import Cell
 from neuronpp.cells.ebner2019_cell import Ebner2019Cell
 from neuronpp.core.populations.population import Population
+from neuronpp.utils.utils import set_random_normal_weights
 
 
 class EbnerHebbianPopulation(Population):
@@ -14,8 +15,13 @@ class EbnerHebbianPopulation(Population):
         cell.make_default_mechanisms()
         return cell
 
-    def syn_definition(self, cell: Ebner2019Cell, source, syn_num_per_source=1, delay=1, netcon_weight=1, **kwargs):
+    def syn_definition(self, cell: Ebner2019Cell, source, syn_num_per_source=1, delay=1, netcon_weight=1,
+                       random_weight_mean=None, **kwargs):
         secs = cell.filter_secs("apic")
         syns_4p, heads = cell.add_synapses_with_spine(source=source, mod_name="Syn4P", secs=secs, number=syn_num_per_source,
                                                       netcon_weight=netcon_weight, delay=delay, **kwargs)
+
+        if random_weight_mean:
+            set_random_normal_weights(point_processes=[s.point_process for s in syns_4p], mean=random_weight_mean,
+                                      std=random_weight_mean)
         return syns_4p
