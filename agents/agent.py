@@ -93,6 +93,14 @@ class Agent:
             cs = self._get_cells(v)
             cells.extend(cs)
         show_connectivity_graph(cells)
+        # return cells
+    
+    def get_cells(self):
+        cells = []
+        for v in self.__dict__.values():
+            cs = self._get_cells(v)
+            cells.extend(cs)
+        return list(set(cells))
 
     def _make_motor_cells(self, output_cells: List[Cell], output_cell_num):
         motor_pop = MotorPopulation("mot")
