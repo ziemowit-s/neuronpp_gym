@@ -9,19 +9,18 @@ from populations.ebner_modulatory_population import EbnerModulatoryPopulation
 
 
 class EbnerOlfactoryAgent(Agent):
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20, warmup=10):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20):
         """
         :param input_cell_num:
         :param input_size:
         :param output_size:
         :param max_hz:
         :param default_stepsize:
-        :param warmup:
         """
         self.hidden_cells = []
         self.inhibitory_cells = []
         super().__init__(input_cell_num=input_cell_num, input_size=input_size, output_size=output_size,
-                         max_hz=max_hz, default_stepsize=default_stepsize, warmup=warmup)
+                         max_hz=max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
@@ -67,7 +66,7 @@ class EbnerOlfactoryAgent(Agent):
         cell.insert('pas')
         cell.insert('hh')
         for source in sources:
-            cell.add_sypanse(source=source.filter_secs('soma')(0.5), netcon_weight=netcon_weight, seg=soma(0.5),
+            cell.add_synapse(source=source.filter_secs('soma')(0.5), netcon_weight=netcon_weight, seg=soma(0.5),
                              mod_name="ExcSigma3Exp2Syn")
             source.add_sypanse(source=cell.filter_secs('soma')(0.5), netcon_weight=netcon_weight, seg=soma(0.5),
                                mod_name="Exp2Syn", e=-90)

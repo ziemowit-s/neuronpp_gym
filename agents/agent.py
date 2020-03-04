@@ -14,7 +14,7 @@ from populations.motor_population import MotorPopulation
 
 
 class Agent:
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20, warmup=0):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20):
         self.reward_syns = []
         self.punish_syns = []
         self.observation_syns = []
@@ -26,7 +26,6 @@ class Agent:
         self.max_hz = max_hz
         self.default_stepsize = default_stepsize
         self.max_stim_per_stepsize = (default_stepsize * max_hz) / 1000
-        self.warmup = warmup
 
         self.input_cells, self.output_cells = self._build_network(input_cell_num=input_cell_num,
                                                                   input_size=input_size, output_cell_num=output_size)
@@ -34,8 +33,21 @@ class Agent:
         self._make_motor_cells(output_cells=self.output_cells, output_cell_num=output_size)
         self._make_records()
 
-        # init and warmup
-        self.sim = RunSim(init_v=-70, warmup=warmup)
+        self.sim = None
+        self.warmup = None
+
+    def init(self, init_v=-70, warmup=0, dt=0.1):
+        """
+        :param init_v:
+        :param warmup:
+        :param dt:
+        :return:
+        """
+        if self.sim is not None:
+            raise RuntimeError("Agent have been previously initialized.")
+
+        self.warmup = warmup
+        self.sim = RunSim(init_v=init_v, warmup=warmup, dt=dt)
 
     @abc.abstractmethod
     def _build_network(self, input_cell_num, input_size, output_cell_num) -> (List[Cell], List[Cell]):
@@ -56,6 +68,9 @@ class Agent:
         """
         Return actions as numpy array of time of spikes in ms.
         """
+        if self.sim is None:
+            raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
+
         if self.observation_syns is None or len(self.observation_syns) == 0:
             raise LookupError("Input synapses field 'self.observation_syns' is empty, but it must match the size of observation.")
 
@@ -79,6 +94,8 @@ class Agent:
         return self._get_motor_output_spike_times(as_global_time=False)
 
     def make_reward(self, reward):
+        if self.sim is None:
+            raise RuntimeError("Before making reward you need to initialize the Agent by calling init() function first.")
         if reward > 0:
             for s in self.reward_syns:
                 s.make_event(1)
@@ -86,20 +103,30 @@ class Agent:
             for s in self.punish_syns:
                 s.make_event(1)
 
-    def show_connectivity_graph(self):
+    @property
+    def cells(self):
         cells = []
-        for v in self.__dict__.values():
-            cs = self._get_cells(v)
+        for value in self.__dict__.values():
+            cs = self._get_recursive_cells(obj=value)
             cells.extend(cs)
-        show_connectivity_graph(cells)
-        # return cells
-    
-    def get_cells(self):
-        cells = []
-        for v in self.__dict__.values():
-            cs = self._get_cells(v)
-            cells.extend(cs)
-        return list(set(cells))
+
+        result = []
+        for c in cells:
+            if c not in result:
+                result.append(c)
+        return result
+
+    def _get_recursive_cells(self, obj):
+        acc = []
+        if isinstance(obj, CoreCell):
+            acc.append(obj)
+        elif isinstance(obj, Population):
+            acc.extend(obj.cells)
+        elif isinstance(obj, list):
+            for o in obj:
+                ac = self._get_recursive_cells(o)
+                acc.extend(ac)
+        return acc
 
     def _make_motor_cells(self, output_cells: List[Cell], output_cell_num):
         motor_pop = MotorPopulation("mot")
@@ -174,18 +201,6 @@ class Agent:
             if stim_num > 0:
                 stim_int = self.default_stepsize / stim_num
         return stim_num, stim_int
-
-    def _get_cells(self, v):
-        acc = []
-        if isinstance(v, CoreCell):
-            acc.append(v)
-        elif isinstance(v, Population):
-            acc.extend(v.cells)
-        elif isinstance(v, list):
-            for vv in v:
-                ac = self._get_cells(vv)
-                acc.extend(ac)
-        return acc
 
     def _get_records(self, cells, variables="v", sec_name="soma", loc=0.5):
         rec_m = [cell.filter_secs(sec_name)(loc) for cell in cells]

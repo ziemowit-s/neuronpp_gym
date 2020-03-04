@@ -3,8 +3,9 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+from neuronpp.utils.network_status_graph import NetworkStatusGraph
+
 from agents.inhib_agent import InhibAgent
-from neuronpp.utils.plot_network_status import PlotNetworkStatus
 
 
 def mnist_prepare(num=10):
@@ -23,16 +24,16 @@ def mnist_prepare(num=10):
 
 
 AGENT_STEPSIZE = 25
-labels_from_mnist = 3
-skip = 2
+MNIST_LABELS = 3
+SKIP_PIXELS = 2
 
-x_train, y_train = mnist_prepare(num=labels_from_mnist)
+x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 fig, ax = plt.subplots(1, 1)
 obj = ax.imshow(x_train[0])
 
-agent = InhibAgent(input_cell_num=12, input_size=x_train[:, ::skip].shape[1] ** 2,
-                   output_size=labels_from_mnist, max_hz=1000,
-                   default_stepsize=AGENT_STEPSIZE, warmup=10)
+agent = InhibAgent(input_cell_num=12, input_size=x_train[:, ::SKIP_PIXELS].shape[1] ** 2,
+                   output_size=MNIST_LABELS, max_hz=1000, default_stepsize=AGENT_STEPSIZE)
+agent.init(init_v=-70, warmup=10, dt=0.1)
 
 agent_compute_time = 0
 agent_observe = True
@@ -42,13 +43,13 @@ gain = 0
 index = 0
 reward = None
 
-cells = agent.get_cells()
-graph = PlotNetworkStatus(cells)
+graph = NetworkStatusGraph(cells=[c for c in agent.cells if not "mot" in c.name])
+graph.plot()
 
 # %%
 while True:
     y = y_train[index]
-    obs = x_train[index, ::skip, ::skip]
+    obs = x_train[index, ::SKIP_PIXELS, ::SKIP_PIXELS]
 
     # write time before agent step
     current_time_relative = (time.time() - agent_compute_time)
