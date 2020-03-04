@@ -6,27 +6,31 @@ import tensorflow as tf
 from agents.inhib_agent import InhibAgent
 from neuronpp.utils.plot_network_status import PlotNetworkStatus
 
-def mnist_prepare(num=3):
+
+def mnist_prepare(num=10):
     mnist = tf.keras.datasets.mnist
+
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train, x_test = x_train / 255.0, x_test / 255.0
+
     index_list = []
     for i, labels in enumerate(y_train):
         if labels in list(np.arange(num)):
             index_list.append(i)
+
     x_train, y_train = x_train[index_list], y_train[index_list]
-    plt.figure()
-    ax1 = plt.subplot(111)
-    obj = ax1.imshow(x_train[0])
-    return x_train, y_train, obj, ax1
+    return x_train, y_train
 
 
 AGENT_STEPSIZE = 25
-labels_from_mnist = 3 #
-skip=2
+labels_from_mnist = 3
+skip = 2
 
-x_train, y_train, obj, ax1 = mnist_prepare(labels_from_mnist)
-agent = InhibAgent(input_cell_num=12, input_size=x_train[:,::skip].shape[1]**2,
+x_train, y_train = mnist_prepare(num=labels_from_mnist)
+fig, ax = plt.subplots(1, 1)
+obj = ax.imshow(x_train[0])
+
+agent = InhibAgent(input_cell_num=12, input_size=x_train[:, ::skip].shape[1] ** 2,
                    output_size=labels_from_mnist, max_hz=1000,
                    default_stepsize=AGENT_STEPSIZE, warmup=10)
 
@@ -39,12 +43,9 @@ index = 0
 reward = None
 
 cells = agent.get_cells()
-graph = PlotNetworkStatus(cells, stable_connections=True)
+graph = PlotNetworkStatus(cells)
 
-fig, ax = plt.subplots(1, 1)
-obj = ax.imshow(x_train[0])
-
-#%%
+# %%
 while True:
     y = y_train[index]
     obs = x_train[index, ::skip, ::skip]
@@ -82,4 +83,4 @@ while True:
     # plot output neurons
     # agent.rec_pattern.plot(animate=True, position=(2,1))
     # plot input neurons
-    agent.rec_out.plot(animate=True)
+    #agent.rec_out.plot(animate=True)
