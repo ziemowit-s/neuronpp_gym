@@ -31,7 +31,7 @@ class InhibAgent(Agent):
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell,
                           delay=1, netcon_weight=0.01, rule='one')
         # HIDDEN
-        self.hidden_pop = self._make_modulatory_population("hid_2", cell_num=12, source=input_pop)
+        self.hidden_pop = self._make_modulatory_population("hid_2", cell_num=input_cell_num, source=input_pop)
         self.hidden_cells = self.hidden_pop.cells
         self.num_inh = 2 + 2 * (input_cell_num - 2)
         for i in range(self.num_inh):
@@ -117,7 +117,7 @@ class InhibAgent(Agent):
 
     def _make_records(self):
         self.rec_input = self._get_records(cells=self.input_cells)
-        self.rec_input = self._get_records(cells=self.hidden_cells)
+        self.rec_hidden = self._get_records(cells=self.hidden_cells)
         self.rec_pattern = self._get_records(cells=self.pattern_cells)
         self.rec_out = self._get_records(cells=self.output_cells)
         self.rec_motor = self._get_records(cells=self.motor_cells)

@@ -31,8 +31,8 @@ x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 fig, ax = plt.subplots(1, 1)
 obj = ax.imshow(x_train[0])
 
-agent = InhibAgent(input_cell_num=12, input_size=x_train[:, ::SKIP_PIXELS].shape[1] ** 2,
-                   output_size=MNIST_LABELS, max_hz=1000, default_stepsize=AGENT_STEPSIZE)
+agent = InhibAgent(input_cell_num=16, input_size=x_train[:, ::SKIP_PIXELS].shape[1] ** 2,
+                   output_size=MNIST_LABELS, max_hz=300, default_stepsize=AGENT_STEPSIZE)
 agent.init(init_v=-70, warmup=10, dt=0.1)
 
 agent_compute_time = 0
@@ -43,7 +43,7 @@ gain = 0
 index = 0
 reward = None
 
-graph = NetworkStatusGraph(cells=[c for c in agent.cells])
+graph = NetworkStatusGraph(cells=[c for c in agent.cells if not "mot" in c.name])
 graph.plot()
 
 # %%
@@ -81,5 +81,8 @@ while True:
     plt.pause(1e-9)
     index += 1
 
-    agent.rec_input.plot(animate=True, position=(3, 4))
+    graph.update_spikes(agent.sim.t)
+    graph.update_weights('w')
+
+    agent.rec_input.plot(animate=True, position=(4, 4))
     agent.rec_out.plot(animate=True)
