@@ -32,12 +32,12 @@ class OlfactoryAgent(Agent):
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell,
                           delay=1, netcon_weight=0.01, rule='one')
         # HIDDEN
-        self.hidden_pop = self._make_modulatory_population("hid_1", cell_num=12, source=input_pop)
+        self.hidden_pop = self._make_modulatory_population("hid_2", cell_num=12, source=input_pop)
         self.hidden_cells = self.hidden_pop.cells
 
-        # INHIBITORY NFB
         for i in range(4):
-            self._make_inhibitory_cells(counter=i, sources=self.hidden_pop.cells[i:i+3], netcon_weight=0.01)
+            self._make_inhibitory_cells('inh', counter=i, sources=input_pop.cells[3*i:3*i+3], 
+                                        targets = self.hidden_pop.cells[3*i:3*i+3], netcon_weight=0.01)
 
         # OUTPUTS
         output_pop = self._make_modulatory_population("out_3", cell_num=output_cell_num, source=self.hidden_pop)
@@ -47,11 +47,9 @@ class OlfactoryAgent(Agent):
     def _make_modulatory_population(self, name, cell_num, source=None):
         pop = Sigma3ModulatoryPopulation(name)
         pop.create(cell_num)
-
         syns = pop.connect(source=source, syn_num_per_source=1,
                            delay=1, neuromodulatory_weight=1, 
                            random_weight_mean=1.0, netcon_weight=0.01, rule='all')
-
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
             self.reward_syns.append(da)
@@ -59,18 +57,19 @@ class OlfactoryAgent(Agent):
 
         return pop
 
-    def _make_inhibitory_cells(self, counter, netcon_weight, sources):
-        cell = Cell('inh', compile_paths="agents/commons/mods/sigma3syn")
-        cell.name = "Inh_2[%s][%s]" % (cell.name, counter)
+    def _make_inhibitory_cells(self, name, counter, netcon_weight, sources, targets):
+        cell = Cell(name, compile_paths="agents/commons/mods/sigma3syn")
+        cell.name = "Inh_1[%s][%s]" % (cell.name, counter)
         self.inhibitory_cells.append(cell)
-
-        soma = cell.add_sec("soma", diam=5, l=5, nseg=1)
+        soma = cell.add_sec("soma", diam=5, l=5, nseg=3)
         cell.insert('pas')
         cell.insert('hh')
         for source in sources:
             cell.add_synapse(source=source.filter_secs('soma')(0.5), netcon_weight=netcon_weight, seg=soma(0.5),
                              mod_name="ExcSigma3Exp2Syn")
-            source.add_synapse(source=cell.filter_secs('soma')(0.5), netcon_weight=netcon_weight, seg=soma(0.5),
+        for target in targets:
+            target.add_synapse(source=cell.filter_secs('soma')(0.5), netcon_weight=netcon_weight, 
+                               seg=target.filter_secs('soma')(0.5),
                                mod_name="Exp2Syn", e=-90)
             
     def _make_records(self):
