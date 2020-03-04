@@ -3,49 +3,54 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from neuronpp.utils.utils import show_connectivity_graph
+from agents.inhib_agent import InhibAgent
+from neuronpp.utils.plot_network_status import PlotNetworkStatus
 
-from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
-from agents.sigma3_olfactory_agent import Sigma3OlfactoryAgent
+def mnist_prepare(num=3):
+    mnist = tf.keras.datasets.mnist
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    x_train, x_test = x_train / 255.0, x_test / 255.0
+    index_list = []
+    for i, labels in enumerate(y_train):
+        if labels in list(np.arange(num)):
+            index_list.append(i)
+    x_train, y_train = x_train[index_list], y_train[index_list]
+    plt.figure()
+    ax1 = plt.subplot(111)
+    obj = ax1.imshow(x_train[0])
+    return x_train, y_train, obj, ax1
 
-SCREEN_RATIO = 0.2  # 5 ms with: screen_ratio=0.2, step_size=3; 10sec env -> 0.3 sec network
-AGENT_STEPSIZE = 50
-# ENV_STEPSIZE = 100
 
-mnist = tf.keras.datasets.mnist
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
-x_train, x_test = x_train / 255.0, x_test / 255.0
+AGENT_STEPSIZE = 25
+labels_from_mnist = 3 #
+skip=2
 
-# x_train, y_train = zip(*[(xs, ys) for xs,ys in zip(x_train, y_train) if ys in [0,1,2]])
-index_list = []
-for i, labels in enumerate(y_train):
-    if labels in [0, 1, 2]:
-        index_list.append(i)
-x_train, y_train = x_train[index_list], y_train[index_list]
+x_train, y_train, obj, ax1 = mnist_prepare(labels_from_mnist)
+agent = InhibAgent(input_cell_num=12, input_size=x_train[:,::skip].shape[1]**2,
+                   output_size=labels_from_mnist, max_hz=1000,
+                   default_stepsize=AGENT_STEPSIZE, warmup=10)
 
-fig, ax = plt.subplots(1,1)
-obj = ax.imshow(x_train[0])
-
-agent = EbnerOlfactoryAgent(input_cell_num=9, input_size=196, output_size=3, max_hz=300, default_stepsize=AGENT_STEPSIZE, warmup=10)
-#agent.show_connectivity_graph()
-w_out = [pp.hoc.w for c in agent.output_cells for pp in c.pps]
-
-# %%
 agent_compute_time = 0
 agent_observe = True
 start_time = time.time()
-
 reset_time = time.time()
 gain = 0
 index = 0
 reward = None
+
+cells = agent.get_cells()
+graph = PlotNetworkStatus(cells, stable_connections=True)
+
+fig, ax = plt.subplots(1, 1)
+obj = ax.imshow(x_train[0])
+
+#%%
 while True:
     y = y_train[index]
-    obs = x_train[index, ::2, ::2]
+    obs = x_train[index, ::skip, ::skip]
 
     # write time before agent step
     current_time_relative = (time.time() - agent_compute_time)
-
     if agent_compute_time > 0:
         stepsize = current_time_relative * 1000
     else:
@@ -75,6 +80,6 @@ while True:
     index += 1
 
     # plot output neurons
-    #agent.rec_in.plot(animate=True, position=(4, 4))
+    # agent.rec_pattern.plot(animate=True, position=(2,1))
     # plot input neurons
     agent.rec_out.plot(animate=True)
