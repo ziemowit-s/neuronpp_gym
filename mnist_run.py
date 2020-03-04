@@ -43,7 +43,7 @@ gain = 0
 index = 0
 reward = None
 
-graph = NetworkStatusGraph(cells=[c for c in agent.cells if not "mot" in c.name])
+graph = NetworkStatusGraph(cells=[c for c in agent.cells])
 graph.plot()
 
 # %%
