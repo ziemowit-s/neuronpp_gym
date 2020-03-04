@@ -118,13 +118,8 @@ class InhibAgent(Agent):
         return pop
 
     def _make_records(self):
-        # rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
-        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.hidden_cells]
-        self.rec_hidden = Record(rec0, variables='v')
-
-        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.pattern_cells]
-        self.rec_pattern = Record(rec1, variables='v')
-        
-        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
-        rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_cells]
-        self.rec_out = Record(rec1 + rec2, variables='v')
+        self.rec_input = self._get_records(cells=self.input_cells)
+        self.rec_input = self._get_records(cells=self.hidden_cells)
+        self.rec_pattern = self._get_records(cells=self.pattern_cells)
+        self.rec_out = self._get_records(cells=self.output_cells)
+        self.rec_motor = self._get_records(cells=self.motor_cells)

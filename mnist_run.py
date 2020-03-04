@@ -80,7 +80,5 @@ while True:
     plt.pause(1e-9)
     index += 1
 
-    # plot output neurons
-    # agent.rec_pattern.plot(animate=True, position=(2,1))
-    # plot input neurons
-    #agent.rec_out.plot(animate=True)
+    agent.rec_input.plot(animate=True, position=(3, 4))
+    agent.rec_out.plot(animate=True)

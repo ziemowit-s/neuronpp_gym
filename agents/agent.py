@@ -6,6 +6,7 @@ from neuronpp.cells.cell import Cell
 
 from neuronpp.core.cells.core_cell import CoreCell
 from neuronpp.core.populations.population import Population
+from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
 from neuronpp.utils.utils import show_connectivity_graph
 
@@ -185,3 +186,7 @@ class Agent:
                 ac = self._get_cells(vv)
                 acc.extend(ac)
         return acc
+
+    def _get_records(self, cells, variables="v", sec_name="soma", loc=0.5):
+        rec_m = [cell.filter_secs(sec_name)(loc) for cell in cells]
+        return Record(rec_m, variables=variables)
