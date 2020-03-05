@@ -12,36 +12,11 @@ Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
     ```bash
     pip install gym[atari]
     ```
-
-## MOD compilation
-* Before run you must compile mod files and copy compiled folder to the main folder (where run Python files are located)
-    ```bash
-    nrmivmodl
-    ```
-
-* To help with compilation use compile_mod.py or CompileMOD class:
-  * It will compile all mods inside the source folder (you can specify many source folders)
-  * copy compiled folder to the target folder 
-    ```bash
-    python compile_mod.py --sources [SOURCE_FOLDER_WITH_MOD_FILES] --target [TARGET_FOLDER]
-    ``` 
-  * By default it works on Linux but you can change default params so that they express your OS params:
-    * compiled_folder_name="x86_64"
-    * mod_compile_command="nrnivmodl"
     
 ## Run
 
-### pong_gym_run.py
-
-* compile mods:
-  * go to neuronpp_gym main folder and compile following mod folders in agents/commons/mods:
-    * 4p_ach_da_syns
-    * ebner2019
-    * neuron_commons
-    
-    ```bash
-    python compile_mod.py -source agents/commons/mods/4p_ach_da_syns agents/commons/mods/ebner2019 agents/commons/mods/neuron_commons -target .
-    ``` 
+* pong_gym_run.py
+* mnist_run.py
     
 ### Known issues:
 

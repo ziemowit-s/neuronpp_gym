@@ -2,24 +2,23 @@ import numpy as np
 
 from neuronpp.utils.record import Record
 from agents.agent import Agent
-from populations.ebner_hebbian_modulatory_population import EbnerHebbianModulatoryPopulation
+from populations.ebner_modulatory_population import EbnerModulatoryPopulation
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
 
 WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
 class EbnerAgent(Agent):
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20, warmup=200):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20):
         """
         :param input_cell_num:
         :param input_size:
         :param output_size:
         :param max_hz:
         :param default_stepsize:
-        :param warmup:
         """
         super().__init__(input_cell_num=input_cell_num, input_size=input_size, output_size=output_size,
-                         max_hz=max_hz, default_stepsize=default_stepsize, warmup=warmup)
+                         max_hz=max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
@@ -40,7 +39,7 @@ class EbnerAgent(Agent):
         cell.make_apical_mechanisms(sections='dend head neck')
 
     def _make_modulatory_population(self, name, cell_num, source=None):
-        pop = EbnerHebbianModulatoryPopulation(name)
+        pop = EbnerModulatoryPopulation(name)
         self.output_cells = pop.create(cell_num)
 
         syns = pop.connect(source=source, syn_num_per_source=1,

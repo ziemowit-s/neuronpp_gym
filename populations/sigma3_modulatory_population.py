@@ -10,7 +10,7 @@ from neuronpp.utils.utils import set_random_normal_weights
 class Sigma3ModulatoryPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
-        name = "input_cell%s" % self.cell_counter
+        name = "Sigma3Modulatory_%s" % self.cell_counter
         cell = Cell(name, compile_paths="agents/commons/mods/sigma3syn")
         cell.add_sec("soma", diam=20, l=20, nseg=10)
         cell.add_sec("apic", diam=2, l=50, nseg=100)
@@ -29,7 +29,8 @@ class Sigma3ModulatoryPopulation(Population):
                                                    netcon_weight=netcon_weight,
                                                    delay=delay, **kwargs)
         if random_weight_mean:
-            set_random_normal_weights(point_processes=[s.point_process for s in syns], mean=random_weight_mean, std=random_weight_mean)
+            set_random_normal_weights(point_processes=[s.point_process for s in syns], mean=random_weight_mean,
+                                      std=random_weight_mean)
 
         ncs_ach = []
         ncs_da = []

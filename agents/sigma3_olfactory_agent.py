@@ -8,20 +8,19 @@ from populations.sigma3_hebbian_population import Sigma3HebbianPopulation
 from populations.sigma3_modulatory_population import Sigma3ModulatoryPopulation
 
 
-class OlfactoryAgent(Agent):
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20, warmup=10):
+class Sigma3OlfactoryAgent(Agent):
+    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20):
         """
         :param input_cell_num:
         :param input_size:
         :param output_size:
         :param max_hz:
         :param default_stepsize:
-        :param warmup:
         """
         self.hidden_cells = []
         self.inhibitory_cells = []
         super().__init__(input_cell_num=input_cell_num, input_size=input_size, output_size=output_size,
-                         max_hz=max_hz, default_stepsize=default_stepsize, warmup=warmup)
+                         max_hz=max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
@@ -36,7 +35,7 @@ class OlfactoryAgent(Agent):
         self.hidden_cells = self.hidden_pop.cells
 
         for i in range(4):
-            self._make_inhibitory_cells('inh', counter=i, sources=input_pop.cells[3*i:3*i+3], 
+            self._make_inhibitory_cells('inh', counter=i, sources=input_pop.cells[3*i:3*i+3],
                                         targets = self.hidden_pop.cells[3*i:3*i+3], netcon_weight=0.01)
 
         # OUTPUTS
@@ -48,7 +47,7 @@ class OlfactoryAgent(Agent):
         pop = Sigma3ModulatoryPopulation(name)
         pop.create(cell_num)
         syns = pop.connect(source=source, syn_num_per_source=1,
-                           delay=1, neuromodulatory_weight=1, 
+                           delay=1, neuromodulatory_weight=1,
                            random_weight_mean=1.0, netcon_weight=0.01, rule='all')
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
@@ -68,14 +67,10 @@ class OlfactoryAgent(Agent):
             cell.add_synapse(source=source.filter_secs('soma')(0.5), netcon_weight=netcon_weight, seg=soma(0.5),
                              mod_name="ExcSigma3Exp2Syn")
         for target in targets:
-            target.add_synapse(source=cell.filter_secs('soma')(0.5), netcon_weight=netcon_weight, 
+            target.add_synapse(source=cell.filter_secs('soma')(0.5), netcon_weight=netcon_weight,
                                seg=target.filter_secs('soma')(0.5),
                                mod_name="Exp2Syn", e=-90)
-            
+
     def _make_records(self):
-        # rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
         rec0 = [cell.filter_secs("soma")(0.5) for cell in self.hidden_cells]
         self.rec_hidden = Record(rec0, variables='v')
-        # rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
-        # rec2 = [cell.filter_secs("soma")(0.5) for cell in self.motor_cells]
-        # self.rec_out = Record(rec1 + rec2, variables='v')
