@@ -6,7 +6,8 @@ from neuronpp.utils.record import Record
 from agents.agent import Agent
 from populations.sigma3_hebbian_population import Sigma3HebbianPopulation
 from populations.sigma3_modulatory_population import Sigma3ModulatoryPopulation
-
+from neuronpp.utils.iclamp import IClamp
+from neuronpp.core.cells.netstim_cell import NetStimCell
 
 class InhibAgent(Agent):
     def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20, warmup=10):
@@ -85,22 +86,25 @@ class InhibAgent(Agent):
         pattern_cell2.insert('hh')
         self.pattern_cells.append(pattern_cell2)
         
-        pattern_cell1.add_synapse(source=source.filter_secs('soma')(0.5), 
-                                  netcon_weight=0.01, 
-                                  seg=soma1(0.5),
-                                  mod_name="Exp2Syn")
+        ns_cell = NetStimCell("stim cell")
+        ns = ns_cell.make_netstim(start=10, number=math.inf, interval=50)
+        # self.ic = IClamp(segment=pattern_cell1.filter_secs('soma')(0.5))
+        # self.ic.stim(delay=10, dur=100, amp=1)
+        # pattern_cell1.add_synapse(source=source.filter_secs('soma')(0.5), 
+        #                           netcon_weight=0.01, 
+        #                           seg=soma1(0.5),
+        #                           mod_name="Exp2Syn")
+        # pattern_cell1.add_synapse(source=pattern_cell2.filter_secs('soma')(0.5), 
+                                  # netcon_weight=0.1, 
+                                  # seg=soma1(0.5),
+                                  # mod_name="Exp2Syn")
         
-        pattern_cell1.add_synapse(source=pattern_cell2.filter_secs('soma')(0.5), 
-                                  netcon_weight=0.01, 
-                                  seg=soma1(0.5),
-                                  mod_name="Exp2Syn")
-        
-        pattern_cell2.add_synapse(source=pattern_cell1.filter_secs('soma')(0.5), 
-                                  netcon_weight=0.01, 
-                                  seg=soma2(0.5),
-                                  mod_name="Exp2Syn")
+        # pattern_cell2.add_synapse(source=pattern_cell1.filter_secs('soma')(0.5), 
+                                  # netcon_weight=0.1, 
+                                  # seg=soma2(0.5),
+                                  # mod_name="Exp2Syn")
         for target in targets:
-            target.add_synapse(source=pattern_cell1.filter_secs('soma')(0.5), netcon_weight=0.01, 
+            target.add_synapse(source=ns, netcon_weight=0.01, 
                                seg=target.filter_secs('soma')(0.5), mod_name="Exp2Syn")
         
         
@@ -110,7 +114,7 @@ class InhibAgent(Agent):
         pop.create(cell_num)
         syns = pop.connect(source=source, syn_num_per_source=1,
                            delay=1, neuromodulatory_weight=1, 
-                           random_weight_mean=1.0, netcon_weight=0.01, rule='all')
+                           random_weight_mean=10, netcon_weight=0.1, rule='all')
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
             self.reward_syns.append(da)

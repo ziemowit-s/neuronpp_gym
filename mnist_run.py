@@ -20,13 +20,13 @@ def mnist_prepare(num=3):
     return x_train, y_train, obj, ax1
 
 
-AGENT_STEPSIZE = 25
+AGENT_STEPSIZE = 100
 labels_from_mnist = 3 #
 skip=2
 
 x_train, y_train, obj, ax1 = mnist_prepare(labels_from_mnist)
 agent = InhibAgent(input_cell_num=12, input_size=x_train[:,::skip].shape[1]**2, 
-                   output_size=labels_from_mnist, max_hz=1000, 
+                   output_size=labels_from_mnist, max_hz=200, 
                    default_stepsize=AGENT_STEPSIZE, warmup=10)
 # agent.show_connectivity_graph()
 # w_out = [pp.hoc.w for c in agent.output_cells for pp in c.pps]
@@ -40,6 +40,7 @@ reward = None
 
 cells = agent.get_cells()
 graph = PlotNetworkStatus(cells, stable_connections=True)
+reward_index_list, label_list = [], []
 #%%
 while True:
     y = y_train[index]
@@ -62,8 +63,11 @@ while True:
     if np.argmin(spikes_list) == y and np.min(spikes_list) != -1:
         reward = 1
         print("i:", index, "reward recognized", y)
+        reward_index_list.append(index)
+        label_list = []
     else:
         reward = -1
+        print('True:', y)
     # print('predict:', np.argmin(spikes_list), ' True:', y)
     # write time after agent step
     agent_compute_time = time.time()
@@ -71,10 +75,10 @@ while True:
     # ax1.set_title('predict: ' + str(np.argmin(spikes_list)) + ' True: ' + str(y))
     graph.update_spikes(agent.sim.t)
     graph.update_weights('w')
-    # plt.pause(1e-8)
+    plt.pause(1e-8)
     index += 1
 
     # plot output neurons
-    # agent.rec_pattern.plot(animate=True, position=(2,1))
+    agent.rec_pattern.plot(animate=True, position=(2,1))
     # plot input neurons
     #agent.rec_out.plot(animate=True)

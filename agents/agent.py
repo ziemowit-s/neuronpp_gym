@@ -34,7 +34,7 @@ class Agent:
         self._make_records()
 
         # init and warmup
-        self.sim = RunSim(init_v=-70, warmup=warmup)
+        self.sim = RunSim(init_v=-70, warmup=warmup, dt=0.25)
 
     @abc.abstractmethod
     def _build_network(self, input_cell_num, input_size, output_cell_num) -> (List[Cell], List[Cell]):
