@@ -32,7 +32,7 @@ fig, ax = plt.subplots(1, 1)
 obj = ax.imshow(x_train[0])
 
 agent = InhibAgent(input_cell_num=16, input_size=x_train[:, ::SKIP_PIXELS].shape[1] ** 2,
-                   output_size=MNIST_LABELS, max_hz=300, default_stepsize=AGENT_STEPSIZE)
+                   output_size=MNIST_LABELS, input_max_hz=300, default_stepsize=AGENT_STEPSIZE)
 agent.init(init_v=-70, warmup=10, dt=0.1)
 
 agent_compute_time = 0

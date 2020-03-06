@@ -15,7 +15,7 @@ from populations.motor_population import MotorPopulation
 AgentOutput = namedtuple("AgentOutput", "index value")
 
 class Agent:
-    def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20):
+    def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
         self.reward_syns = []
         self.punish_syns = []
         self.observation_syns = []
@@ -24,9 +24,9 @@ class Agent:
         self.input_size = input_size
         self.output_size = output_size
 
-        self.max_hz = max_hz
+        self.max_hz = input_max_hz
         self.default_stepsize = default_stepsize
-        self.max_stim_per_stepsize = (default_stepsize * max_hz) / 1000
+        self.max_stim_per_stepsize = (default_stepsize * input_max_hz) / 1000
 
         self.input_cells, self.output_cells = self._build_network(input_cell_num=input_cell_num,
                                                                   input_size=input_size, output_cell_num=output_size)

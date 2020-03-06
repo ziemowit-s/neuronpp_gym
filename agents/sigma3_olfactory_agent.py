@@ -20,7 +20,7 @@ class Sigma3OlfactoryAgent(Agent):
         self.hidden_cells = []
         self.inhibitory_cells = []
         super().__init__(input_cell_num=input_cell_num, input_size=input_size, output_size=output_size,
-                         max_hz=input_max_hz, default_stepsize=default_stepsize)
+                         input_max_hz=input_max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
