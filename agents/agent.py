@@ -1,4 +1,5 @@
 import abc
+from collections import namedtuple
 from typing import List
 
 import numpy as np
@@ -8,10 +9,10 @@ from neuronpp.core.cells.core_cell import CoreCell
 from neuronpp.core.populations.population import Population
 from neuronpp.utils.record import Record
 from neuronpp.utils.run_sim import RunSim
-from neuronpp.utils.utils import show_connectivity_graph
 
 from populations.motor_population import MotorPopulation
 
+AgentOutput = namedtuple("AgentOutput", "index value")
 
 class Agent:
     def __init__(self, input_cell_num, input_size, output_size, max_hz, default_stepsize=20):
@@ -30,6 +31,7 @@ class Agent:
         self.input_cells, self.output_cells = self._build_network(input_cell_num=input_cell_num,
                                                                   input_size=input_size, output_cell_num=output_size)
         self.observation_syns = [c.syns for c in self.input_cells]
+
         self._make_motor_cells(output_cells=self.output_cells, output_cell_num=output_size)
         self._make_records()
 
@@ -64,9 +66,20 @@ class Agent:
     def _make_records(self):
         raise NotImplementedError()
 
-    def step(self, observation=None, reward=None, stepsize=None):
+    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None):
         """
-        Return actions as numpy array of time of spikes in ms.
+
+        :param observation:
+        :param reward:
+        :param stepsize:
+        :param output_type:
+            "time": returns time of first spike for each motor cells.
+            "rate": returns number of spikes for each motor cells OR -1 if there were no spike for the cell.
+            "raw": returns raw array for each motor cell of all spikes in time in ms.
+        :param sort_func:
+            Optional function which define sorting on list of AgentOutput objects.
+        :return:
+            list(AgentOutput(index, values))
         """
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
@@ -90,8 +103,10 @@ class Agent:
             stepsize = self.default_stepsize
         self.sim.run(stepsize)
 
-        # Return actions as time of spikes in ms
-        return self._get_motor_output_spike_times(as_global_time=False)
+        output = self._get_output(output_type)
+        if sort_func:
+            output = sorted(output, key=lambda x: sort_func(x))
+        return output
 
     def make_reward(self, reward):
         if self.sim is None:
@@ -128,27 +143,23 @@ class Agent:
                 acc.extend(ac)
         return acc
 
-    def _make_motor_cells(self, output_cells: List[Cell], output_cell_num):
-        motor_pop = MotorPopulation("mot")
-        self.motor_cells = motor_pop.create(output_cell_num)
-        motor_pop.connect(source=output_cells, netcon_weight=0.1, rule='one')
+    def _get_output(self, output_type):
+        outputs = []
+        min_time = self.sim.t - self.sim.last_runtime
+        for i, o in enumerate(self.motor_cells):
+            spikes = np.array([i for i in o.get_spikes() if i >= min_time])
 
-    def _get_motor_output_spike_times(self, as_global_time=True):
-        """
-        :param as_global_time:
-        :return:
-            Spike times of dummy cells representing motor output stimulation which produce action for dummy motors
-        """
-        moves = []
-        for o in self.motor_cells:
-            times_of_move = o.get_spikes()
-            if not as_global_time:
-                min_time = self.sim.t - self.sim.last_runtime
-                times_of_move = np.array([i for i in times_of_move if i >= min_time])
-                # times_of_move -= min_time
-                times_of_move -= self.warmup
-            moves.append(times_of_move)
-        return moves
+            if output_type == "rate":
+                s = len(spikes)
+            elif output_type == "time":
+                s = spikes[0] if len(spikes) > 0 else -1
+            elif output_type == "raw":
+                s = spikes
+            else:
+                raise TypeError("Output type can be only string of: 'rate' or 'time', but provided %s" % output_type)
+            outputs.append(AgentOutput(index=i, value=s))
+
+        return outputs
 
     def _make_1d_observation(self, observation, syns):
         #if len(observation) != len(syns):
@@ -202,6 +213,26 @@ class Agent:
                 stim_int = self.default_stepsize / stim_num
         return stim_num, stim_int
 
-    def _get_records(self, cells, variables="v", sec_name="soma", loc=0.5):
+    def _make_spike_detection(self):
+        for oc in self.output_cells:
+
+            if not hasattr(oc, "_spike_detector"):
+                raise TypeError("Output cells must be of type NetConCell and have spike detection mechanism.")
+
+            if oc._spike_detector is None:
+                soma = oc.filter_secs("soma")
+                if isinstance(soma, list):
+                    raise LookupError("Output cells need to setup spike detector or at least have a single 'soma' section"
+                                      "so that spike detection can be implemented automatically.")
+
+                oc.make_spike_detector(soma(0.5))
+
+    def _make_motor_cells(self, output_cells: List[Cell], output_cell_num, netcon_weight=0.1):
+        motor_pop = MotorPopulation("mot")
+        self.motor_cells = motor_pop.create(output_cell_num)
+        motor_pop.connect(source=output_cells, netcon_weight=netcon_weight, rule='one')
+
+    @staticmethod
+    def _get_records(cells, variables="v", sec_name="soma", loc=0.5):
         rec_m = [cell.filter_secs(sec_name)(loc) for cell in cells]
         return Record(rec_m, variables=variables)

@@ -1,3 +1,4 @@
+import numpy as np
 import time
 
 from agents.sigma3_olfactory_agent import Sigma3OlfactoryAgent
@@ -10,10 +11,20 @@ RESET_AFTER = 24
 
 ENV_STEPSIZE = ENV_STEPSIZE / 1000
 
-if __name__ == '__main__':
 
+def make_action(move):
+    if move == 0:  # UP
+        return 2
+    elif move == 1:  # DOWN
+        return 3
+    else:  # NONE
+        return 0
+
+
+if __name__ == '__main__':
     env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = Sigma3OlfactoryAgent(input_cell_num=9, input_size=input_size, output_size=2, max_hz=100, default_stepsize=AGENT_STEPSIZE)
+    agent = Sigma3OlfactoryAgent(input_cell_num=9, input_size=input_size, output_size=2, input_max_hz=100,
+                                 default_stepsize=AGENT_STEPSIZE)
     agent.init(init_v=-70, warmup=10, dt=0.1)
     print('input_size', input_size)
 
@@ -21,29 +32,27 @@ if __name__ == '__main__':
     agent_observe = True
     start_time = time.time()
 
-    moves = []
+    move = -1
     reset_time = time.time()
     gain = 0
     while True:
         env.render()
-        if len(moves) > 0:
-            action = moves[0][0]
-            moves = moves[1:]
-        else:
-            action = 0
+
+        action = make_action(move)
         obs, reward, done, info = env.step(action)
         obs = prepare_pong_observation(obs, ratio=SCREEN_RATIO, show=True)
 
         time_from_reset = time.time() - reset_time
         if reward != 0 or done or time_from_reset > RESET_AFTER:
-            print('reward:', reward, 'time_from_reset:', time_from_reset)
+
+            #print('reward:', reward, 'time_from_reset:', time_from_reset)
             reset(env, SCREEN_RATIO)
             reset_time = time.time()
             if reward > 0 or time_from_reset > 20:
                 gain += 1
                 reward = 1
             elif reward < 0:
-                print("score:", gain)
+                #print("score:", gain)
                 gain = 0
 
         # write time before agent step
@@ -56,15 +65,11 @@ if __name__ == '__main__':
         # Sent observation to the Agent every ENV_STEPSIZE ms
         if reward != 0 or agent_compute_time == 0 or current_time_relative > ENV_STEPSIZE:
             # agent step
-            new_moves = agent.step(observation=obs, reward=reward)
-
-            up_moves = new_moves[0]
-            down_moves = new_moves[1]
-            # print moves
-            if len(up_moves) > 0 or len(down_moves) > 0:
-                # extend moves list with new moves
-                new_moves = sorted([(2, m) for m in up_moves] + [(3, m) for m in down_moves], key=lambda x: x[1])
-                moves.extend(new_moves)
+            outputs = agent.step(observation=obs, reward=reward, output_type="time", sort_func=lambda x: -x[1])
+            move = -1
+            if np.abs(outputs[0].value-outputs[1].value) > agent.sim.dt and outputs[0].value > -1:
+                print(outputs)
+                move = outputs[0].index
 
             # write time after agent step
             agent_compute_time = time.time()

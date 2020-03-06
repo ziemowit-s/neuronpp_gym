@@ -58,12 +58,10 @@ while True:
     else:
         stepsize = None
 
-    output_spikes_ms = agent.step(observation=obs, reward=reward)
-    if len(output_spikes_ms) == 0:
-        predicted = -1
-    else:
-        predicted = sorted([(i, ms[0] if len(ms) > 0 else math.inf) for i, ms in enumerate(output_spikes_ms)])[0]
-        predicted = predicted[0] if predicted[1] != math.inf else -1
+    output = agent.step(observation=obs, reward=reward, output_type="time", sort_func=lambda x: x)[0]
+    predicted = -1
+    if output.value > -1:
+        predicted = output.index
 
     if predicted == y:
         reward = 1
@@ -84,5 +82,5 @@ while True:
     graph.update_spikes(agent.sim.t)
     graph.update_weights('w')
 
-    agent.rec_input.plot(animate=True, position=(4, 4))
-    agent.rec_out.plot(animate=True)
+    #agent.rec_input.plot(animate=True, position=(4, 4))
+    #agent.rec_out.plot(animate=True)
