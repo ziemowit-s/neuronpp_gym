@@ -106,7 +106,7 @@ class InhibAgent(Agent):
         pop = Sigma3ModulatoryPopulation(name)
         pop.create(cell_num)
         syns = pop.connect(source=source, syn_num_per_source=1,
-                           delay=1, neuromodulatory_weight=1,
+                           delay=1, neuromodulatory_weight=0.1,
                            random_weight_mean=1.0, netcon_weight=0.01, rule='all')
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
