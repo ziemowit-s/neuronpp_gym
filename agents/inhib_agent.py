@@ -33,6 +33,8 @@ class InhibAgent(Agent):
         # HIDDEN
         self.hidden_pop = self._make_modulatory_population("hid_2", cell_num=input_cell_num, source=input_pop)
         self.hidden_cells = self.hidden_pop.cells
+
+        # INHIBITORY
         self.num_inh = 2 + 2 * (input_cell_num - 2)
         for i in range(self.num_inh):
             if i == 0:
@@ -46,7 +48,7 @@ class InhibAgent(Agent):
                 self._make_inhibitory_cells('inh', counter=i, sources=input_pop.cells[n_cell],
                                             targets=[self.hidden_pop.cells[ii] for ii in [n_cell - 1, n_cell + 1]], netcon_weight=0.01)
 
-        # pattern pop
+        # PATTERN POPULATION
         self._make_pattern_cells(source=self.hidden_pop.cells[0], targets=self.hidden_pop.cells)
         # OUTPUTS
         output_pop = self._make_modulatory_population("out_4", cell_num=output_cell_num, source=self.hidden_pop)

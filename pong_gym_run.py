@@ -45,14 +45,14 @@ if __name__ == '__main__':
         time_from_reset = time.time() - reset_time
         if reward != 0 or done or time_from_reset > RESET_AFTER:
 
-            #print('reward:', reward, 'time_from_reset:', time_from_reset)
+            # print('reward:', reward, 'time_from_reset:', time_from_reset)
             reset(env, SCREEN_RATIO)
             reset_time = time.time()
             if reward > 0 or time_from_reset > 20:
                 gain += 1
                 reward = 1
             elif reward < 0:
-                #print("score:", gain)
+                # print("score:", gain)
                 gain = 0
 
         # write time before agent step
@@ -67,7 +67,7 @@ if __name__ == '__main__':
             # agent step
             outputs = agent.step(observation=obs, reward=reward, output_type="time", sort_func=lambda x: -x[1])
             move = -1
-            if np.abs(outputs[0].value-outputs[1].value) > agent.sim.dt and outputs[0].value > -1:
+            if np.abs(outputs[0].value - outputs[1].value) > agent.sim.dt and outputs[0].value > -1:
                 print(outputs)
                 move = outputs[0].index
 
@@ -75,6 +75,6 @@ if __name__ == '__main__':
             agent_compute_time = time.time()
 
         # plot output neurons
-        #agent.rec_in.plot(animate=True, position=(3, 3))
+        # agent.rec_in.plot(animate=True, position=(3, 3))
         # plot input neurons
-        #agent.rec_out.plot(animate=True)
+        # agent.rec_out.plot(animate=True)

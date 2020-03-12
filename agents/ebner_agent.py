@@ -24,11 +24,13 @@ class EbnerAgent(Agent):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
 
         # INPUTS
-        input_pop = EbnerHebbianPopulation("inp")
+        input_pop = EbnerHebbianPopulation("inp_0")
+        input_pop.create(cell_num=input_cell_num)
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=0.01, rule='one')
         input_pop.add_mechs(single_cell_mechs=self._add_mechs)
+
         # OUTPUTS
-        output_pop = self._make_modulatory_population("out", cell_num=output_cell_num, source=input_pop)
+        output_pop = self._make_modulatory_population("out_1", cell_num=output_cell_num, source=input_pop)
         output_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         return input_pop.cells, output_pop.cells

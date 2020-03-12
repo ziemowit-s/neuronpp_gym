@@ -34,6 +34,7 @@ class Sigma3OlfactoryAgent(Agent):
         self.hidden_pop = self._make_modulatory_population("hid_2", cell_num=12, source=input_pop)
         self.hidden_cells = self.hidden_pop.cells
 
+        # INH
         for i in range(4):
             self._make_inhibitory_cells('inh', counter=i, sources=input_pop.cells[3*i:3*i+3],
                                         targets = self.hidden_pop.cells[3*i:3*i+3], netcon_weight=0.01)

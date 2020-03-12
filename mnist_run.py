@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 
-from agents.inhib_agent import InhibAgent
+from agents.ebner_agent import EbnerAgent
 
 
 def mnist_prepare(num=10):
@@ -31,7 +31,7 @@ x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 fig, ax = plt.subplots(1, 1)
 obj = ax.imshow(x_train[0])
 
-agent = InhibAgent(input_cell_num=16, input_size=x_train[:, ::SKIP_PIXELS].shape[1] ** 2,
+agent = EbnerAgent(input_cell_num=16, input_size=x_train[:, ::SKIP_PIXELS].shape[1] ** 2,
                    output_size=MNIST_LABELS, input_max_hz=300, default_stepsize=AGENT_STEPSIZE)
 agent.init(init_v=-70, warmup=10, dt=0.1)
 
@@ -82,5 +82,5 @@ while True:
     graph.update_spikes(agent.sim.t)
     graph.update_weights('w')
 
-    #agent.rec_input.plot(animate=True, position=(4, 4))
-    #agent.rec_out.plot(animate=True)
+    # agent.rec_input.plot(animate=True, position=(4, 4))
+    # agent.rec_out.plot(animate=True)
