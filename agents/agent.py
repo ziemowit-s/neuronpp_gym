@@ -105,8 +105,14 @@ class Agent:
 
         output = self._get_output(output_type)
         if sort_func:
-            output = sorted(output, key=lambda x: sort_func(x))
+            output = sorted(output, key=sort_func)
         return output
+
+    def make_reward_step(self, reward, stepsize=None):
+        self.make_reward(reward)
+        if stepsize is None:
+            stepsize = self.default_stepsize
+        self.sim.run(stepsize)
 
     def make_reward(self, reward):
         if self.sim is None:
@@ -151,8 +157,10 @@ class Agent:
 
             if output_type == "rate":
                 s = len(spikes)
-            elif output_type == "time":
+            elif output_type == "first-spike":
                 s = spikes[0] if len(spikes) > 0 else -1
+            elif output_type == "last-spike":
+                s = spikes[-1] if len(spikes) > 0 else -1
             elif output_type == "raw":
                 s = spikes
             else:

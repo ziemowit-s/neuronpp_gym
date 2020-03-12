@@ -1,4 +1,3 @@
-import math
 import time
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +22,7 @@ def mnist_prepare(num=10):
     return x_train, y_train
 
 
-AGENT_STEPSIZE = 25
+AGENT_STEPSIZE = 50
 MNIST_LABELS = 3
 SKIP_PIXELS = 2
 
@@ -32,7 +31,7 @@ fig, ax = plt.subplots(1, 1)
 obj = ax.imshow(x_train[0])
 
 agent = EbnerAgent(input_cell_num=16, input_size=x_train[:, ::SKIP_PIXELS].shape[1] ** 2,
-                   output_size=MNIST_LABELS, input_max_hz=300, default_stepsize=AGENT_STEPSIZE)
+                   output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
 agent.init(init_v=-70, warmup=10, dt=0.1)
 
 agent_compute_time = 0
@@ -58,7 +57,7 @@ while True:
     else:
         stepsize = None
 
-    output = agent.step(observation=obs, reward=reward, output_type="time", sort_func=lambda x: x)[0]
+    output = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)[0]
     predicted = -1
     if output.value > -1:
         predicted = output.index
@@ -68,6 +67,7 @@ while True:
         print("i:", index, "reward recognized", y)
     else:
         reward = -1
+    agent.make_reward_step(reward=reward)
 
     # write time after agent step
     agent_compute_time = time.time()
@@ -75,12 +75,13 @@ while True:
     # update image
     obj.set_data(obs)
     ax.set_title('Predicted: %s True: %s' % (predicted, y))
-    plt.draw()
-    plt.pause(1e-9)
-    index += 1
 
     graph.update_spikes(agent.sim.t)
     graph.update_weights('w')
 
-    # agent.rec_input.plot(animate=True, position=(4, 4))
-    # agent.rec_out.plot(animate=True)
+    plt.draw()
+    plt.pause(1e-9)
+    index += 1
+
+    #agent.rec_input.plot(animate=True, position=(4, 4))
+    #agent.rec_output.plot(animate=True)
