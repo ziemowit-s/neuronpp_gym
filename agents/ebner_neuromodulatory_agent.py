@@ -34,14 +34,8 @@ class EbnerOlfactoryAgent(Agent):
         self.hidden_pop = self._make_modulatory_population("hid_1", cell_num=12, source=input_pop)
         self.hidden_cells = self.hidden_pop.cells
 
-        # INHIBITORY NFB
-        for i in range(4):
-            self._make_inhibitory_cells(population_num=2, counter=i,
-                                        sources=self.hidden_pop.cells[i:i + 3],
-                                        netcon_weight=0.1)
-
         # OUTPUTS
-        output_pop = self._make_modulatory_population("out_3", cell_num=output_cell_num, source=self.hidden_pop)
+        output_pop = self._make_modulatory_population("out_2", cell_num=output_cell_num, source=self.hidden_pop)
 
         return input_pop.cells, output_pop.cells
 
