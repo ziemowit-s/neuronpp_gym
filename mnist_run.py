@@ -2,6 +2,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+from neuronpp.utils.hitmap_graph import HitmapGraph
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 
 from agents.ebner_agent import EbnerAgent
@@ -50,6 +51,7 @@ input_size = x_train.shape[1] * x_train.shape[2]
 agent = EbnerAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
                    output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
 agent.init(init_v=-80, warmup=2000, dt=0.3)
+hitmap_graph = HitmapGraph(cells=agent.input_cells, shape=(6,6))
 
 x_pixel_size, y_pixel_size = agent.get_input_cell_observation_shape(x_train[0])
 input_syn_per_cell = int(np.ceil(input_size / INPUT_CELL_NUM))
@@ -101,6 +103,7 @@ while True:
 
     graph.update_spikes(agent.sim.t)
     graph.update_weights('w')
+    hitmap_graph.plot()
 
     plt.draw()
     plt.pause(1e-9)
