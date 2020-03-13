@@ -192,22 +192,19 @@ class Agent:
             If None - will be of y_window size
         :return:
         """
-        div = np.sqrt(len(self.input_cells))
         x_shape = observation.shape[1]
         y_shape = observation.shape[0]
-
-        x_window = int(np.ceil(x_shape / div))
-        y_window = int(np.ceil(y_shape / div))
+        x_pixel_size, y_pixel_size = self.get_input_cell_observation_shape(observation)
         if x_stride is None:
-            x_stride = x_window
+            x_stride = x_pixel_size
         if y_stride is None:
-            y_stride = y_window
+            y_stride = y_pixel_size
 
         syn_i = 0
         for y in range(0, y_shape, y_stride):
             for x in range(0, x_shape, x_stride):
 
-                window = observation[y:y + y_window, x:x + x_window]
+                window = observation[y:y + y_pixel_size, x:x + x_pixel_size]
                 if np.sum(window) > 0:
                     self._make_1d_observation(observation=window.flatten(), syns=syns[syn_i])
                 syn_i += 1
@@ -244,3 +241,12 @@ class Agent:
     def _get_records(cells, variables="v", sec_name="soma", loc=0.5):
         rec_m = [cell.filter_secs(sec_name)(loc) for cell in cells]
         return Record(rec_m, variables=variables)
+
+    def get_input_cell_observation_shape(self, observation):
+        div = np.sqrt(len(self.input_cells))
+        x_shape = observation.shape[1]
+        y_shape = observation.shape[0]
+
+        x_pixel_size = int(np.ceil(x_shape / div))
+        y_pixel_size = int(np.ceil(y_shape / div))
+        return x_pixel_size, y_pixel_size

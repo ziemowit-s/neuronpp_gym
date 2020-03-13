@@ -22,17 +22,40 @@ def mnist_prepare(num=10):
     return x_train, y_train
 
 
-AGENT_STEPSIZE = 50
+def make_imshow(x_train):
+    fig, ax = plt.subplots(1, 1)
+
+    x_ticks = np.arange(0, x_train.shape[1], x_pixel_size)
+    y_ticks = np.arange(0, x_train.shape[2], y_pixel_size)
+    ax.set_xticks(x_ticks)
+    ax.set_xticks([i for i in range(x_train.shape[1])], minor=True)
+    ax.set_yticks(y_ticks)
+    ax.set_yticks([i for i in range(x_train.shape[2])], minor=True)
+
+    obj = ax.imshow(x_train[0], cmap=plt.get_cmap('gray'), extent=[0, x_train.shape[1], 0, x_train.shape[2]])
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=1)
+    return obj, ax
+
+
+AGENT_STEPSIZE = 100
 MNIST_LABELS = 3
 SKIP_PIXELS = 2
+INPUT_CELL_NUM = 36
 
 x_train, y_train = mnist_prepare(num=MNIST_LABELS)
-fig, ax = plt.subplots(1, 1)
-obj = ax.imshow(x_train[0])
+x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
+input_size = x_train.shape[1] * x_train.shape[2]
 
-agent = EbnerAgent(input_cell_num=16, input_size=x_train[:, ::SKIP_PIXELS].shape[1] ** 2,
+agent = EbnerAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
                    output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
-agent.init(init_v=-70, warmup=10, dt=0.1)
+agent.init(init_v=-80, warmup=2000, dt=0.3)
+
+x_pixel_size, y_pixel_size = agent.get_input_cell_observation_shape(x_train[0])
+input_syn_per_cell = int(np.ceil(input_size / INPUT_CELL_NUM))
+print('pixels per input cell:', input_syn_per_cell)
+
+obj, ax = make_imshow(x_train)
 
 agent_compute_time = 0
 agent_observe = True
@@ -48,7 +71,7 @@ graph.plot()
 # %%
 while True:
     y = y_train[index]
-    obs = x_train[index, ::SKIP_PIXELS, ::SKIP_PIXELS]
+    obs = x_train[index]
 
     # write time before agent step
     current_time_relative = (time.time() - agent_compute_time)
