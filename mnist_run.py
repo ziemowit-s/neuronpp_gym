@@ -6,6 +6,7 @@ from neuronpp.utils.hitmap_graph import HitmapGraph
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 
 from agents.ebner_agent import EbnerAgent
+from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
 
 
 def mnist_prepare(num=10):
@@ -39,19 +40,21 @@ def make_imshow(x_train):
     return obj, ax
 
 
-AGENT_STEPSIZE = 100
+AGENT_STEPSIZE = 10
 MNIST_LABELS = 3
 SKIP_PIXELS = 2
-INPUT_CELL_NUM = 36
+INPUT_CELL_NUM = 9
 
 x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 input_size = x_train.shape[1] * x_train.shape[2]
 
-agent = EbnerAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
-                   output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+agent = EbnerOlfactoryAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
+                            output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
 agent.init(init_v=-80, warmup=2000, dt=0.3)
-hitmap_graph = HitmapGraph(cells=agent.input_cells, shape=(6,6))
+
+hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
+hitmap_graph = HitmapGraph(cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
 
 x_pixel_size, y_pixel_size = agent.get_input_cell_observation_shape(x_train[0])
 input_syn_per_cell = int(np.ceil(input_size / INPUT_CELL_NUM))
@@ -109,5 +112,5 @@ while True:
     plt.pause(1e-9)
     index += 1
 
-    #agent.rec_input.plot(animate=True, position=(4, 4))
-    #agent.rec_output.plot(animate=True)
+    # agent.rec_input.plot(animate=True, position=(4, 4))
+    # agent.rec_output.plot(animate=True)
