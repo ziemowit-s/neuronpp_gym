@@ -40,17 +40,17 @@ def make_imshow(x_train):
     return obj, ax
 
 
-AGENT_STEPSIZE = 10
+AGENT_STEPSIZE = 50
 MNIST_LABELS = 3
 SKIP_PIXELS = 2
-INPUT_CELL_NUM = 9
+INPUT_CELL_NUM = 36
 
 x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 input_size = x_train.shape[1] * x_train.shape[2]
 
-agent = EbnerOlfactoryAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
-                            output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+agent = EbnerAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
+                   output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
 agent.init(init_v=-80, warmup=2000, dt=0.3)
 
 hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
