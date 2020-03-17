@@ -2,7 +2,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from neuronpp.utils.hitmap_graph import HitmapGraph
+from neuronpp.utils.heatmap_graph import HeatmapGraph
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 
 from agents.ebner_agent import EbnerAgent
@@ -54,7 +54,7 @@ agent = EbnerAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
 agent.init(init_v=-80, warmup=2000, dt=0.3)
 
 hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
-hitmap_graph = HitmapGraph(cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
+hitmap_graph = HeatmapGraph(cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
 
 x_pixel_size, y_pixel_size = agent.get_input_cell_observation_shape(x_train[0])
 input_syn_per_cell = int(np.ceil(input_size / INPUT_CELL_NUM))
@@ -85,7 +85,10 @@ while True:
     else:
         stepsize = None
 
-    output = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)[0]
+    outputs, stim_cell_names = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value,
+                                          return_stim_cell_names=True)
+    output = outputs[0]
+
     predicted = -1
     if output.value > -1:
         predicted = output.index
@@ -106,7 +109,7 @@ while True:
 
     graph.update_spikes(agent.sim.t)
     graph.update_weights('w')
-    hitmap_graph.plot()
+    hitmap_graph.plot(with_names=True)
 
     plt.draw()
     plt.pause(1e-9)

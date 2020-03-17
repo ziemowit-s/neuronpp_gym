@@ -18,7 +18,6 @@ class Agent:
     def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
         self.reward_syns = []
         self.punish_syns = []
-        self.observation_syns = []
 
         self.input_cell_num = input_cell_num
         self.input_size = input_size
@@ -30,7 +29,6 @@ class Agent:
 
         self.input_cells, self.output_cells = self._build_network(input_cell_num=input_cell_num,
                                                                   input_size=input_size, output_cell_num=output_size)
-        self.observation_syns = [c.syns for c in self.input_cells]
 
         self._make_motor_cells(output_cells=self.output_cells, output_cell_num=output_size)
         self._make_records()
@@ -66,7 +64,7 @@ class Agent:
     def _make_records(self):
         raise NotImplementedError()
 
-    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None):
+    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None, return_stim_cell_names=False):
         """
 
         :param observation:
@@ -78,23 +76,29 @@ class Agent:
             "raw": returns raw array for each motor cell of all spikes in time in ms.
         :param sort_func:
             Optional function which define sorting on list of AgentOutput objects.
+        :param return_stim_cell_names:
+            if True it will return tuple(list(AgentOutput(index, values)), stim_cell_name_list)
         :return:
-            list(AgentOutput(index, values))
+            list(AgentOutput(index, values)) or
+            tuple(list(AgentOutput(index, values)), stim_cell_name_list)
         """
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
 
-        if self.observation_syns is None or len(self.observation_syns) == 0:
-            raise LookupError("Input synapses field 'self.observation_syns' is empty, but it must match the size of observation.")
+        if self.input_cells is None or len(self.input_cells) == 0:
+            raise LookupError("Method self._build_network() must return tuple(input_cells, output_cells), "
+                              "however input_cells were not defined.")
 
+        stim_cell_names = []
         if observation is not None:
             dim = observation.ndim
             if dim == 1:
-                self._make_1d_observation(observation, syns=[s for cell, syns in self.observation_syns for s in syns])
+                stimulated_cells = self._make_1d_observation(observation)
             elif dim == 2:
-                self._make_2d_observation(observation, syns=self.observation_syns)
+                stimulated_cells = self._make_2d_observation(observation)
             else:
                 raise RuntimeError("Observation can be 1D or 2D, but provided %sD" % dim)
+            stim_cell_names = [c.name for c in stimulated_cells]
         if reward is not None and reward != 0:
             self.make_reward(reward)
 
@@ -106,6 +110,8 @@ class Agent:
         output = self._get_output(output_type)
         if sort_func:
             output = sorted(output, key=sort_func)
+        if return_stim_cell_names:
+            output = output, stim_cell_names
         return output
 
     def make_reward_step(self, reward, stepsize=None):
@@ -169,10 +175,59 @@ class Agent:
 
         return outputs
 
-    def _make_1d_observation(self, observation, syns):
-        #if len(observation) != len(syns):
-        #    raise IndexError("Observation sub-array has len %s and synapse sub-array has len %s. Must be equal in len.")
+    def _make_1d_observation(self, observation):
+        """
+        :param observation:
+        :return:
+            list of names of stimulated cells in the stimulation order
+        """
+        syns = []
+        stimulated_cells = []
+        for c in self.input_cells:
+            for i, s in enumerate(c.syns):
+                syns.append(s)
+                stimulated_cells.append(c)
+                if i == len(observation):
+                    break
 
+        self._make_single_observation(observation, syns)
+        return stimulated_cells
+
+    def _make_2d_observation(self, observation, x_stride: int = None, y_stride: int = None):
+        """
+
+        :param observation:
+        :param x_stride:
+            If None - will be of x_window size
+        :param y_stride:
+            If None - will be of y_window size
+        :return:
+            list of names of stimulated cells in the stimulation order
+        """
+        x_shape = observation.shape[1]
+        y_shape = observation.shape[0]
+        x_window_size, y_window_size = self.get_input_cell_observation_shape(observation)
+        if x_stride is None:
+            x_stride = x_window_size
+        if y_stride is None:
+            y_stride = y_window_size
+
+        syn_i = 0
+        stimulated_cells = []
+        for y in range(0, y_shape, y_stride):
+            for x in range(0, x_shape, x_stride):
+                current_cell = self.input_cells[syn_i]
+                window = observation[y:y + y_window_size, x:x + x_window_size]
+
+                if np.sum(window) > 0:
+                    self._make_single_observation(observation=window.flatten(), syns=current_cell.syns)
+
+                syn_i += 1
+                stimulated_cells.append(current_cell)
+
+        return stimulated_cells
+
+    def _make_single_observation(self, observation, syns):
         for obs, syn in zip(observation, syns):
             if obs > 0:
                 stim_num, interval = self._get_poisson_stim(obs)
@@ -180,34 +235,6 @@ class Agent:
                 for e in range(stim_num):
                     syn.make_event(next_event)
                     next_event += interval
-
-    def _make_2d_observation(self, observation, syns, x_stride: int = None, y_stride: int = None):
-        """
-
-        :param observation:
-        :param syns:
-        :param x_stride:
-            If None - will be of x_window size
-        :param y_stride:
-            If None - will be of y_window size
-        :return:
-        """
-        x_shape = observation.shape[1]
-        y_shape = observation.shape[0]
-        x_pixel_size, y_pixel_size = self.get_input_cell_observation_shape(observation)
-        if x_stride is None:
-            x_stride = x_pixel_size
-        if y_stride is None:
-            y_stride = y_pixel_size
-
-        syn_i = 0
-        for y in range(0, y_shape, y_stride):
-            for x in range(0, x_shape, x_stride):
-
-                window = observation[y:y + y_pixel_size, x:x + x_pixel_size]
-                if np.sum(window) > 0:
-                    self._make_1d_observation(observation=window.flatten(), syns=syns[syn_i])
-                syn_i += 1
 
     def _get_poisson_stim(self, single_input_value):
         stim_num = 0
