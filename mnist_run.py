@@ -2,8 +2,8 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from neuronpp.utils.heatmap_graph import HeatmapGraph
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
+from neuronpp.utils.spikes_heatmap_graph import SpikesHeatmapGraph
 
 from agents.ebner_agent import EbnerAgent
 from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
@@ -76,7 +76,7 @@ obj, ax = make_mnist_imshow(x_train)
 
 # Create heatmap graph for input cells
 hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
-hitmap_graph = HeatmapGraph(cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
+hitmap_graph = SpikesHeatmapGraph(name="Input Cells", cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
 
 # Create network graph
 network_graph = NetworkStatusGraph(cells=[c for c in agent.cells if not "mot" in c.name])
@@ -120,7 +120,7 @@ while True:
     # Update graphs
     network_graph.update_spikes(agent.sim.t)
     network_graph.update_weights('w')
-    hitmap_graph.plot(with_names=True)
+    hitmap_graph.plot()
 
     # Update visualizations
     obj.set_data(obs)
