@@ -1,5 +1,6 @@
 matplotlib
 tensorflow
+seaborn
 numpy
 scipy
 cython
