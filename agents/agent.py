@@ -79,8 +79,10 @@ class Agent:
         :param return_stim_cell_names:
             if True it will return tuple(list(AgentOutput(index, values)), stim_cell_name_list)
         :return:
-            list(AgentOutput(index, values)) or
-            tuple(list(AgentOutput(index, values)), stim_cell_name_list)
+            if return_stim_cell_names is False (default):
+                list(AgentOutput(index, value))
+            else:
+                tuple( list(AgentOutput(index, values)) , stim_cell_name_list )
         """
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
@@ -156,6 +158,14 @@ class Agent:
         return acc
 
     def _get_output(self, output_type):
+        """
+        :param output_type:
+            "time": returns time of first spike for each motor cells.
+            "rate": returns number of spikes for each motor cells OR -1 if there were no spike for the cell.
+            "raw": returns raw array for each motor cell of all spikes in time in ms.
+        :return:
+            list(AgentOutput(index, value))
+        """
         outputs = []
         min_time = self.sim.t - self.sim.last_runtime
         for i, o in enumerate(self.motor_cells):
@@ -163,10 +173,8 @@ class Agent:
 
             if output_type == "rate":
                 s = len(spikes)
-            elif output_type == "first-spike":
+            elif output_type == "time":
                 s = spikes[0] if len(spikes) > 0 else -1
-            elif output_type == "last-spike":
-                s = spikes[-1] if len(spikes) > 0 else -1
             elif output_type == "raw":
                 s = spikes
             else:
