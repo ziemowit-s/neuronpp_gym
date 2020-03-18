@@ -14,6 +14,7 @@ from populations.motor_population import MotorPopulation
 
 AgentOutput = namedtuple("AgentOutput", "cell_name index value")
 
+
 class Agent:
     def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
         self.reward_syns = []
