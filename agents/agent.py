@@ -12,7 +12,7 @@ from neuronpp.utils.run_sim import RunSim
 
 from populations.motor_population import MotorPopulation
 
-AgentOutput = namedtuple("AgentOutput", "index value")
+AgentOutput = namedtuple("AgentOutput", "cell_name index value")
 
 class Agent:
     def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
@@ -64,7 +64,7 @@ class Agent:
     def _make_records(self):
         raise NotImplementedError()
 
-    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None, return_stim_cell_names=False):
+    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None):
         """
 
         :param observation:
@@ -76,13 +76,8 @@ class Agent:
             "raw": returns raw array for each motor cell of all spikes in time in ms.
         :param sort_func:
             Optional function which define sorting on list of AgentOutput objects.
-        :param return_stim_cell_names:
-            if True it will return tuple(list(AgentOutput(index, values)), stim_cell_name_list)
         :return:
-            if return_stim_cell_names is False (default):
-                list(AgentOutput(index, value))
-            else:
-                tuple( list(AgentOutput(index, values)) , stim_cell_name_list )
+            list(AgentOutput(index, cell_name, value))
         """
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
@@ -91,16 +86,14 @@ class Agent:
             raise LookupError("Method self._build_network() must return tuple(input_cells, output_cells), "
                               "however input_cells were not defined.")
 
-        stim_cell_names = []
         if observation is not None:
             dim = observation.ndim
             if dim == 1:
-                stimulated_cells = self._make_1d_observation(observation)
+                self._make_1d_observation(observation)
             elif dim == 2:
-                stimulated_cells = self._make_2d_observation(observation)
+                self._make_2d_observation(observation)
             else:
                 raise RuntimeError("Observation can be 1D or 2D, but provided %sD" % dim)
-            stim_cell_names = [c.name for c in stimulated_cells]
         if reward is not None and reward != 0:
             self.make_reward(reward)
 
@@ -112,8 +105,6 @@ class Agent:
         output = self._get_output(output_type)
         if sort_func:
             output = sorted(output, key=sort_func)
-        if return_stim_cell_names:
-            output = output, stim_cell_names
         return output
 
     def make_reward_step(self, reward, stepsize=None):
@@ -168,8 +159,8 @@ class Agent:
         """
         outputs = []
         min_time = self.sim.t - self.sim.last_runtime
-        for i, o in enumerate(self.motor_cells):
-            spikes = np.array([i for i in o.get_spikes() if i >= min_time])
+        for i, c in enumerate(self.motor_cells):
+            spikes = np.array([i for i in c.get_spikes() if i >= min_time])
 
             if output_type == "rate":
                 s = len(spikes)
@@ -179,7 +170,7 @@ class Agent:
                 s = spikes
             else:
                 raise TypeError("Output type can be only string of: 'rate' or 'time', but provided %s" % output_type)
-            outputs.append(AgentOutput(index=i, value=s))
+            outputs.append(AgentOutput(index=i, cell_name=c.name, value=s))
 
         return outputs
 
@@ -190,20 +181,15 @@ class Agent:
             list of names of stimulated cells in the stimulation order
         """
         syns = []
-        stimulated_cells = []
         for c in self.input_cells:
             for i, s in enumerate(c.syns):
                 syns.append(s)
-                stimulated_cells.append(c)
                 if i == len(observation):
                     break
-
         self._make_single_observation(observation, syns)
-        return stimulated_cells
 
     def _make_2d_observation(self, observation, x_stride: int = None, y_stride: int = None):
         """
-
         :param observation:
         :param x_stride:
             If None - will be of x_window size
@@ -221,19 +207,13 @@ class Agent:
             y_stride = y_window_size
 
         syn_i = 0
-        stimulated_cells = []
         for y in range(0, y_shape, y_stride):
             for x in range(0, x_shape, x_stride):
                 current_cell = self.input_cells[syn_i]
                 window = observation[y:y + y_window_size, x:x + x_window_size]
-
                 if np.sum(window) > 0:
                     self._make_single_observation(observation=window.flatten(), syns=current_cell.syns)
-
                 syn_i += 1
-                stimulated_cells.append(current_cell)
-
-        return stimulated_cells
 
     def _make_single_observation(self, observation, syns):
         for obs, syn in zip(observation, syns):

@@ -85,8 +85,7 @@ while True:
     else:
         stepsize = None
 
-    outputs, stim_cell_names = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value,
-                                          return_stim_cell_names=True)
+    outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)
     output = outputs[0]
 
     predicted = -1
