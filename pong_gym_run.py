@@ -1,6 +1,7 @@
 import numpy as np
 import time
 
+from agents.agent import ConvParam
 from agents.sigma3_olfactory_agent import Sigma3OlfactoryAgent
 from utils import get_env, prepare_pong_observation, reset
 
@@ -22,11 +23,10 @@ def make_action(move):
 
 
 if __name__ == '__main__':
-    env, input_size = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = Sigma3OlfactoryAgent(input_cell_num=9, input_size=input_size, output_size=2, input_max_hz=100,
-                                 default_stepsize=AGENT_STEPSIZE)
+    env, input_shape = get_env('Pong-v0', ratio=SCREEN_RATIO)
+    agent = Sigma3OlfactoryAgent(output_cell_num=2, input_max_hz=100, default_stepsize=AGENT_STEPSIZE)
+    agent.build(input_shape=input_shape, x_param=ConvParam(f=, p=, s=), y_param=ConvParam(f=, p=, s=))
     agent.init(init_v=-70, warmup=10, dt=0.1)
-    print('input_size', input_size)
 
     agent_compute_time = 0
     agent_observe = True

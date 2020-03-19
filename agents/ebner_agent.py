@@ -9,16 +9,13 @@ WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
 class EbnerAgent(Agent):
-    def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, default_stepsize=20):
         """
-        :param input_cell_num:
-        :param input_size:
-        :param output_size:
+        :param output_cell_num:
         :param input_max_hz:
         :param default_stepsize:
         """
-        super().__init__(input_cell_num=input_cell_num, input_size=input_size, output_size=output_size,
-                         input_max_hz=input_max_hz, default_stepsize=default_stepsize)
+        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))

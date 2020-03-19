@@ -5,6 +5,7 @@ import tensorflow as tf
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 from neuronpp.utils.spikes_heatmap_graph import SpikesHeatmapGraph
 
+from agents.agent import ConvParam
 from agents.ebner_agent import EbnerAgent
 from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
 
@@ -29,17 +30,19 @@ def mnist_prepare(num=10):
     return x_train, y_train
 
 
-def make_mnist_imshow(x_train):
+def make_mnist_imshow(x_train, x_kernel_size, y_kernel_size):
     """
     Prepare image show to update on each steps. It will also show receptive field of each input neuron
+    :param x_kernel_size:
+    :param y_kernel_size:
     :param x_train:
         whole mnist trainset
     :return:
     """
     fig, ax = plt.subplots(1, 1)
 
-    x_ticks = np.arange(0, x_train.shape[1], x_pixel_size)
-    y_ticks = np.arange(0, x_train.shape[2], y_pixel_size)
+    x_ticks = np.arange(0, x_train.shape[1], x_kernel_size)
+    y_ticks = np.arange(0, x_train.shape[2], y_kernel_size)
     ax.set_xticks(x_ticks)
     ax.set_xticks([i for i in range(x_train.shape[1])], minor=True)
     ax.set_yticks(y_ticks)
@@ -59,20 +62,14 @@ INPUT_CELL_NUM = 36  # how much input cells agent will have
 # Prepare mnist dataset
 x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
-input_size = x_train.shape[1] * x_train.shape[2]
 
 # Create Agent
-agent = EbnerAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
-                   output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+agent.build(input_shape=x_train.shape, x_param=ConvParam(f=4, p=1, s=4), y_param=ConvParam(f=4, p=1, s=4))
 agent.init(init_v=-80, warmup=2000, dt=0.3)
 
-# Print how many pixels for each input cell
-x_pixel_size, y_pixel_size = agent.get_input_cell_observation_shape(x_train[0])
-input_syn_per_cell = int(np.ceil(input_size / INPUT_CELL_NUM))
-print('pixels per input cell:', input_syn_per_cell)
-
 # Show and update mnist image
-obj, ax = make_mnist_imshow(x_train)
+obj, ax = make_mnist_imshow(x_train, x_kernel_size=agent.x_kernel_size, y_kernel_size=agent.y_kernel_size)
 
 # Create heatmap graph for input cells
 hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))

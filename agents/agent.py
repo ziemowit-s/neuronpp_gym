@@ -1,4 +1,5 @@
 import abc
+import math
 from collections import namedtuple
 from typing import List
 
@@ -13,29 +14,56 @@ from neuronpp.utils.run_sim import RunSim
 from populations.motor_population import MotorPopulation
 
 AgentOutput = namedtuple("AgentOutput", "cell_name index value")
+ConvParam = namedtuple("ConvParam", "f p s")
 
 
 class Agent:
-    def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, default_stepsize=20):
         self.reward_syns = []
         self.punish_syns = []
 
-        self.input_cell_num = input_cell_num
-        self.input_size = input_size
-        self.output_size = output_size
+        self.output_cell_num = output_cell_num
 
         self.max_hz = input_max_hz
         self.default_stepsize = default_stepsize
         self.max_stim_per_stepsize = (default_stepsize * input_max_hz) / 1000
 
-        self.input_cells, self.output_cells = self._build_network(input_cell_num=input_cell_num,
-                                                                  input_size=input_size, output_cell_num=output_size)
-
-        self._make_motor_cells(output_cells=self.output_cells, output_cell_num=output_size)
-        self._make_records()
-
         self.sim = None
         self.warmup = None
+        self.input_size = None
+        self.input_shape = None
+        self.input_cells = None
+        self.output_cells = None
+        self.input_cell_num = None
+
+        self._agent_builded = False
+
+    def build(self, input_shape, x_param: ConvParam, y_param: ConvParam):
+        if self.sim is not None:
+            raise RuntimeError("You must first build agent before initialisation.")
+        if self.sim is not None:
+            raise RuntimeError("Simulation cannot been run before build.")
+
+        self.x_kernel_size = self.get_kernel_size(w=input_shape[0], f=x_param.f, p=x_param.p, s=x_param.s)
+        self.y_kernel_size = self.get_kernel_size(w=input_shape[1], f=y_param.f, p=y_param.p, s=y_param.s)
+
+        self.input_size = np.prod(input_shape)
+        self.input_cell_num = self.x_kernel_size * self.y_kernel_size
+
+        self.input_cells, self.output_cells = self._build_network(input_cell_num=self.input_cell_num,
+                                                                  input_size=self.input_size, output_cell_num=self.output_cell_num)
+
+        if len(self.input_cells) != self.input_cell_num:
+            raise ValueError("Based on Kernel size input_cell_num is %s, however input_cells returned by _build_network() is: %s" %
+                             (self.input_cell_num, len(self.input_cells)))
+
+        if len(self.output_cells) != self.output_cell_num:
+            raise ValueError("Based on Kernel size output_cell_num is %s, however output_cells returned by _build_network() is: %s" %
+                             (self.output_cell_num, len(self.output_cells)))
+
+        self._make_motor_cells(output_cells=self.output_cells, output_cell_num=self.output_cell_num)
+        self._make_records()
+        self._agent_builded = True
 
     def init(self, init_v=-70, warmup=0, dt=0.1):
         """
@@ -45,7 +73,7 @@ class Agent:
         :return:
         """
         if self.sim is not None:
-            raise RuntimeError("Agent have been previously initialized.")
+            raise RuntimeError("Simulation cannot been run before initialization.")
 
         self.warmup = warmup
         self.sim = RunSim(init_v=init_v, warmup=warmup, dt=dt)
@@ -80,6 +108,10 @@ class Agent:
         :return:
             list(AgentOutput(index, cell_name, value))
         """
+        # Check agent's built and initialization before step
+        if not self._agent_builded:
+            raise RuntimeError("Before step you need to build() agent and then initialize by calling init() function first.")
+
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
 
@@ -87,6 +119,7 @@ class Agent:
             raise LookupError("Method self._build_network() must return tuple(input_cells, output_cells), "
                               "however input_cells were not defined.")
 
+        # Make observation
         if observation is not None:
             dim = observation.ndim
             if dim == 1:
@@ -95,6 +128,8 @@ class Agent:
                 self._make_2d_observation(observation)
             else:
                 raise RuntimeError("Observation can be 1D or 2D, but provided %sD" % dim)
+
+        # Make reward
         if reward is not None and reward != 0:
             self.make_reward(reward)
 
@@ -103,6 +138,7 @@ class Agent:
             stepsize = self.default_stepsize
         self.sim.run(stepsize)
 
+        # Make output
         output = self._get_output(output_type)
         if sort_func:
             output = sorted(output, key=sort_func)
@@ -115,8 +151,11 @@ class Agent:
         self.sim.run(stepsize)
 
     def make_reward(self, reward):
+        if not self._agent_builded:
+            raise RuntimeError("Before making reward you need to build the Agent by calling build() function first.")
         if self.sim is None:
             raise RuntimeError("Before making reward you need to initialize the Agent by calling init() function first.")
+
         if reward > 0:
             for s in self.reward_syns:
                 s.make_event(1)
@@ -136,6 +175,22 @@ class Agent:
             if c not in result:
                 result.append(c)
         return result
+
+    @staticmethod
+    def get_kernel_size(w, f, p, s):
+        """
+        :param w:
+            image size of one of dimentions
+        :param f:
+            convolution size of one of dimentions
+        :param p:
+            padding
+        :param s:
+            stride
+        :return:
+            size of kernel for one of dimention
+        """
+        return math.floor((w - f + 2 * p) / s + 1)
 
     def _get_recursive_cells(self, obj):
         acc = []

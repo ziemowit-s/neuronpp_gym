@@ -34,6 +34,7 @@ def show_cv2(obs):
         cv2.destroyAllWindows()
         raise GeneratorExit("OpenCV image show stopped.")
 
+
 def prepare_pong_observation(obs, ratio, show=False):
     """
     :param obs:
@@ -101,7 +102,7 @@ def reset(env, ratio):
         obs, *_ = env.step(0)
     obs = prepare_pong_observation(obs, ratio)
 
-    return obs.size
+    return obs.shape
 
 
 def get_env(name, ratio):
