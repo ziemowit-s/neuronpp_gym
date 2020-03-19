@@ -39,11 +39,10 @@ def make_mnist_imshow(x_train, agent):
     :return:
     """
     fig, ax = plt.subplots(1, 1)
-
-    x_ticks = np.arange(0, x_train.shape[1], agent.x_kernel_size)
-    y_ticks = np.arange(0, x_train.shape[2], agent.y_kernel_size)
-
     template = agent.pad_observation(x_train[0])
+
+    x_ticks = np.arange(0, template.shape[0], agent.x_stride)
+    y_ticks = np.arange(0, template.shape[1], agent.y_stride)
 
     ax.set_xticks(x_ticks)
     ax.set_xticks([i for i in range(template.shape[0])], minor=True)
@@ -56,7 +55,7 @@ def make_mnist_imshow(x_train, agent):
     return obj, ax
 
 
-AGENT_STEPSIZE = 50  # in ms - how long agent will look on a single mnist image
+AGENT_STEPSIZE = 60  # in ms - how long agent will look on a single mnist image
 MNIST_LABELS = 3  # how much mnist digits we want
 SKIP_PIXELS = 2  # how many pixels on mnist we want to skip (image will make smaller)
 
@@ -68,6 +67,7 @@ x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=100, stepsize=AGENT_STEPSIZE)
 agent.build(input_shape=x_train.shape[1:], x_param=ConvParam(f=4, p=1, s=4), y_param=ConvParam(f=4, p=1, s=4))
 agent.init(init_v=-80, warmup=2000, dt=0.2)
+print("Input neurons:", agent.input_cell_num)
 
 # Show and update mnist image
 imshow_obj, ax = make_mnist_imshow(x_train, agent)
@@ -110,10 +110,6 @@ while True:
         print("i:", index, "reward recognized", y)
     else:
         reward = -1
-    agent.make_reward_step(reward=reward)
-
-    # Write time after agent step
-    agent_compute_time = time.time()
 
     # Update graphs
     network_graph.update_spikes(agent.sim.t)
@@ -126,9 +122,14 @@ while True:
     plt.draw()
     plt.pause(1e-9)
 
+    # Make reward step
+    agent.make_reward_step(reward=reward, stepsize=50)
+    # Write time after agent step
+    agent_compute_time = time.time()
+
     # increment mnist image index
     index += 1
 
     # make visuatization of mV on each cells by layers
-    agent.rec_input.plot(animate=True, position=(4, 4))
-    # agent.rec_output.plot(animate=True)
+    #agent.rec_input.plot(animate=True, position=(4, 4))
+    #agent.rec_output.plot(animate=True)

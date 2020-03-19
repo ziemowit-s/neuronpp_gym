@@ -51,8 +51,8 @@ class Agent:
         if not isinstance(input_shape, tuple) or len(input_shape) != 2:
             raise ValueError("Input shape can be only a tuple of size 2")
 
-        self.x_kernel_size = self.get_kernel_size(w=input_shape[0], f=x_param.f, p=x_param.p, s=x_param.s)
-        self.y_kernel_size = self.get_kernel_size(w=input_shape[1], f=y_param.f, p=y_param.p, s=y_param.s)
+        self.x_kernel_num = self.get_kernel_size(w=input_shape[0], f=x_param.f, p=x_param.p, s=x_param.s)
+        self.y_kernel_num = self.get_kernel_size(w=input_shape[1], f=y_param.f, p=y_param.p, s=y_param.s)
 
         self.x_padding = x_param.p
         self.y_padding = y_param.p
@@ -62,7 +62,7 @@ class Agent:
 
         self.input_shape = input_shape
         self.input_size = np.prod(input_shape)
-        self.input_cell_num = self.x_kernel_size * self.y_kernel_size
+        self.input_cell_num = self.x_kernel_num * self.y_kernel_num
 
         self.input_cells, self.output_cells = self._build_network(input_cell_num=self.input_cell_num,
                                                                   input_size=self.input_size, output_cell_num=self.output_cell_num)
@@ -257,7 +257,7 @@ class Agent:
             for x in range(0, self.input_shape[0], self.x_stride):
 
                 current_cell = self.input_cells[syn_i]
-                window = obs[y:y + self.y_kernel_size, x:x + self.x_kernel_size]
+                window = obs[y:y + self.y_kernel_num, x:x + self.x_kernel_num]
 
                 if np.sum(window) > 0:
                     self._make_single_observation(observation=window.flatten(), syns=current_cell.syns)
