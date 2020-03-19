@@ -36,16 +36,23 @@ class Agent:
         self.output_cells = None
         self.input_cell_num = None
 
+        self.x_padding = None
+        self.y_padding = None
+
         self._agent_builded = False
 
-    def build(self, input_shape, x_param: ConvParam, y_param: ConvParam):
+    def build(self, input_shape: tuple, x_param: ConvParam, y_param: ConvParam):
         if self.sim is not None:
             raise RuntimeError("You must first build agent before initialisation.")
         if self.sim is not None:
             raise RuntimeError("Simulation cannot been run before build.")
+        if not isinstance(input_shape, tuple) or len(input_shape) != 2:
+            raise ValueError("Input shape can be only a tuple of size 2")
 
         self.x_kernel_size = self.get_kernel_size(w=input_shape[0], f=x_param.f, p=x_param.p, s=x_param.s)
         self.y_kernel_size = self.get_kernel_size(w=input_shape[1], f=y_param.f, p=y_param.p, s=y_param.s)
+        self.x_padding = x_param.p
+        self.y_padding = y_param.p
 
         self.input_size = np.prod(input_shape)
         self.input_cell_num = self.x_kernel_size * self.y_kernel_size
@@ -121,13 +128,11 @@ class Agent:
 
         # Make observation
         if observation is not None:
-            dim = observation.ndim
-            if dim == 1:
-                self._make_1d_observation(observation)
-            elif dim == 2:
-                self._make_2d_observation(observation)
-            else:
-                raise RuntimeError("Observation can be 1D or 2D, but provided %sD" % dim)
+            if observation.ndim != 2:
+                raise ValueError("Observation must be a numpy array of dim 2")
+            if self.input_size != observation.size:
+                raise RuntimeError("Observation must be of same size as self.input_size, which is a product of input_shape.")
+            self._make_observation(observation)
 
         # Make reward
         if reward is not None and reward != 0:
@@ -175,6 +180,11 @@ class Agent:
             if c not in result:
                 result.append(c)
         return result
+
+    def pad_observation(self, obs):
+        if not self._agent_builded:
+            raise RuntimeError("Before calling pad_observation() you need to build the Agent by calling build() function first.")
+        return np.pad(obs, (self.x_padding, self.y_padding), 'constant', constant_values=(0, 0))
 
     @staticmethod
     def get_kernel_size(w, f, p, s):
@@ -230,43 +240,21 @@ class Agent:
 
         return outputs
 
-    def _make_1d_observation(self, observation):
+    def _make_observation(self, obs):
         """
-        :param observation:
+        :param obs:
         :return:
             list of names of stimulated cells in the stimulation order
         """
-        syns = []
-        for c in self.input_cells:
-            for i, s in enumerate(c.syns):
-                syns.append(s)
-                if i == len(observation):
-                    break
-        self._make_single_observation(observation, syns)
-
-    def _make_2d_observation(self, observation, x_stride: int = None, y_stride: int = None):
-        """
-        :param observation:
-        :param x_stride:
-            If None - will be of x_window size
-        :param y_stride:
-            If None - will be of y_window size
-        :return:
-            list of names of stimulated cells in the stimulation order
-        """
-        x_shape = observation.shape[1]
-        y_shape = observation.shape[0]
-        x_window_size, y_window_size = self.get_input_cell_observation_shape(observation)
-        if x_stride is None:
-            x_stride = x_window_size
-        if y_stride is None:
-            y_stride = y_window_size
+        obs = self.pad_observation(obs)
 
         syn_i = 0
-        for y in range(0, y_shape, y_stride):
-            for x in range(0, x_shape, x_stride):
+        for y in range(0, self.y_kernel_size, self.x_padding):
+            for x in range(0, self.x_kernel_size, self.y_padding):
+
                 current_cell = self.input_cells[syn_i]
-                window = observation[y:y + y_window_size, x:x + x_window_size]
+                window = obs[y:y + self.y_kernel_size, x:x + self.x_kernel_size]
+
                 if np.sum(window) > 0:
                     self._make_single_observation(observation=window.flatten(), syns=current_cell.syns)
                 syn_i += 1
@@ -312,12 +300,3 @@ class Agent:
     def _get_records(cells, variables="v", sec_name="soma", loc=0.5):
         rec_m = [cell.filter_secs(sec_name)(loc) for cell in cells]
         return Record(rec_m, variables=variables)
-
-    def get_input_cell_observation_shape(self, observation):
-        div = np.sqrt(len(self.input_cells))
-        x_shape = observation.shape[1]
-        y_shape = observation.shape[0]
-
-        x_pixel_size = int(np.ceil(x_shape / div))
-        y_pixel_size = int(np.ceil(y_shape / div))
-        return x_pixel_size, y_pixel_size
