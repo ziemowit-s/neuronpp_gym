@@ -1,7 +1,10 @@
 import time
+from typing import List
+
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+from neuronpp.cells.cell import Cell
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 from neuronpp.utils.spikes_heatmap_graph import SpikesHeatmapGraph
 
@@ -29,28 +32,35 @@ def mnist_prepare(num=10):
     return x_train, y_train
 
 
-def make_mnist_imshow(x_train):
+def make_mnist_imshow(x_train, agent, input_cells: List[Cell] = None):
     """
     Prepare image show to update on each steps. It will also show receptive field of each input neuron
     :param x_train:
         whole mnist trainset
+    :param input_cells:
     :return:
     """
     fig, ax = plt.subplots(1, 1)
+    x_pixel_size, y_pixel_size = agent.get_2d_basket_shape(x_train[0])
 
     x_ticks = np.arange(0, x_train.shape[1], x_pixel_size)
     y_ticks = np.arange(0, x_train.shape[2], y_pixel_size)
+
+    # set major lines (receptive fields for each cell)
     ax.set_xticks(x_ticks)
     ax.set_xticks([i for i in range(x_train.shape[1])], minor=True)
+    ax.grid(which='minor', alpha=0.2)
+
+    # set minor lines (each pixel marked)
     ax.set_yticks(y_ticks)
     ax.set_yticks([i for i in range(x_train.shape[2])], minor=True)
+    ax.grid(which='major', alpha=1)
 
     obj = ax.imshow(x_train[0], cmap=plt.get_cmap('gray'), extent=[0, x_train.shape[1], 0, x_train.shape[2]])
-    ax.grid(which='minor', alpha=0.2)
-    ax.grid(which='major', alpha=1)
     return obj, ax
 
 
+# Global parameters for the run
 AGENT_STEPSIZE = 50  # in ms - how long agent will look on a single mnist image
 MNIST_LABELS = 3  # how much mnist digits we want
 SKIP_PIXELS = 2  # how many pixels on mnist we want to skip (image will make smaller)
@@ -59,20 +69,13 @@ INPUT_CELL_NUM = 36  # how much input cells agent will have
 # Prepare mnist dataset
 x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
-input_size = x_train.shape[1] * x_train.shape[2]
 
 # Create Agent
-agent = EbnerAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
-                   output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+agent = EbnerAgent(input_cell_num=INPUT_CELL_NUM, input_shape=x_train.shape[1:], output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
 agent.init(init_v=-80, warmup=2000, dt=0.3)
 
-# Print how many pixels for each input cell
-x_pixel_size, y_pixel_size = agent.get_input_cell_observation_shape(x_train[0])
-input_syn_per_cell = int(np.ceil(input_size / INPUT_CELL_NUM))
-print('pixels per input cell:', input_syn_per_cell)
-
 # Show and update mnist image
-obj, ax = make_mnist_imshow(x_train)
+obj, ax = make_mnist_imshow(agent=agent, x_train=x_train)
 
 # Create heatmap graph for input cells
 hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
