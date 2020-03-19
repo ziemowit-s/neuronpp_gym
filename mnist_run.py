@@ -65,9 +65,9 @@ x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 
 # Create Agent
-agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=100, stepsize=AGENT_STEPSIZE)
 agent.build(input_shape=x_train.shape[1:], x_param=ConvParam(f=4, p=1, s=4), y_param=ConvParam(f=4, p=1, s=4))
-agent.init(init_v=-80, warmup=2000, dt=0.3)
+agent.init(init_v=-80, warmup=2000, dt=0.2)
 
 # Show and update mnist image
 imshow_obj, ax = make_mnist_imshow(x_train, agent)
@@ -130,5 +130,5 @@ while True:
     index += 1
 
     # make visuatization of mV on each cells by layers
-    # agent.rec_input.plot(animate=True, position=(4, 4))
+    agent.rec_input.plot(animate=True, position=(4, 4))
     # agent.rec_output.plot(animate=True)

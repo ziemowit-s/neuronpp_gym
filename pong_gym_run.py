@@ -24,7 +24,7 @@ def make_action(move):
 
 if __name__ == '__main__':
     env, input_shape = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = Sigma3OlfactoryAgent(output_cell_num=2, input_max_hz=100, default_stepsize=AGENT_STEPSIZE)
+    agent = Sigma3OlfactoryAgent(output_cell_num=2, input_max_hz=100, stepsize=AGENT_STEPSIZE)
     agent.build(input_shape=input_shape, x_param=ConvParam(f=, p=, s=), y_param=ConvParam(f=, p=, s=))
     agent.init(init_v=-70, warmup=10, dt=0.1)
 

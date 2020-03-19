@@ -18,15 +18,15 @@ ConvParam = namedtuple("ConvParam", "f p s")
 
 
 class Agent:
-    def __init__(self, output_cell_num, input_max_hz, default_stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, stepsize=20):
         self.reward_syns = []
         self.punish_syns = []
 
         self.output_cell_num = output_cell_num
 
         self.max_hz = input_max_hz
-        self.default_stepsize = default_stepsize
-        self.max_stim_per_stepsize = (default_stepsize * input_max_hz) / 1000
+        self.stepsize = stepsize
+        self.max_stim_per_stepsize = int(round((stepsize * input_max_hz) / 1000))
 
         self.sim = None
         self.warmup = None
@@ -38,6 +38,8 @@ class Agent:
 
         self.x_padding = None
         self.y_padding = None
+        self.x_stride = None
+        self.y_stride = None
 
         self._agent_builded = False
 
@@ -51,9 +53,14 @@ class Agent:
 
         self.x_kernel_size = self.get_kernel_size(w=input_shape[0], f=x_param.f, p=x_param.p, s=x_param.s)
         self.y_kernel_size = self.get_kernel_size(w=input_shape[1], f=y_param.f, p=y_param.p, s=y_param.s)
+
         self.x_padding = x_param.p
         self.y_padding = y_param.p
 
+        self.x_stride = x_param.s
+        self.y_stride = y_param.s
+
+        self.input_shape = input_shape
         self.input_size = np.prod(input_shape)
         self.input_cell_num = self.x_kernel_size * self.y_kernel_size
 
@@ -100,12 +107,11 @@ class Agent:
     def _make_records(self):
         raise NotImplementedError()
 
-    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None):
+    def step(self, observation=None, reward=None, output_type="time", sort_func=None):
         """
 
         :param observation:
         :param reward:
-        :param stepsize:
         :param output_type:
             "time": returns time of first spike for each motor cells.
             "rate": returns number of spikes for each motor cells OR -1 if there were no spike for the cell.
@@ -139,9 +145,7 @@ class Agent:
             self.make_reward(reward)
 
         # Run
-        if stepsize is None:
-            stepsize = self.default_stepsize
-        self.sim.run(stepsize)
+        self.sim.run(self.stepsize)
 
         # Make output
         output = self._get_output(output_type)
@@ -152,7 +156,7 @@ class Agent:
     def make_reward_step(self, reward, stepsize=None):
         self.make_reward(reward)
         if stepsize is None:
-            stepsize = self.default_stepsize
+            stepsize = self.stepsize
         self.sim.run(stepsize)
 
     def make_reward(self, reward):
@@ -229,7 +233,7 @@ class Agent:
             spikes = np.array([i for i in c.get_spikes() if i >= min_time])
 
             if output_type == "rate":
-                s = len(spikes)
+                s = len(spikes) if len(spikes) > 0 else -1
             elif output_type == "time":
                 s = spikes[0] if len(spikes) > 0 else -1
             elif output_type == "raw":
@@ -249,8 +253,8 @@ class Agent:
         obs = self.pad_observation(obs)
 
         syn_i = 0
-        for y in range(0, self.y_kernel_size, self.x_padding):
-            for x in range(0, self.x_kernel_size, self.y_padding):
+        for y in range(0, self.input_shape[1], self.y_stride):
+            for x in range(0, self.input_shape[0], self.x_stride):
 
                 current_cell = self.input_cells[syn_i]
                 window = obs[y:y + self.y_kernel_size, x:x + self.x_kernel_size]
@@ -260,21 +264,28 @@ class Agent:
                 syn_i += 1
 
     def _make_single_observation(self, observation, syns):
-        for obs, syn in zip(observation, syns):
-            if obs > 0:
-                stim_num, interval = self._get_poisson_stim(obs)
+        """
+        The key function which makes spikes for input_cells based ob observation numpy array
+
+        :param observation:
+        :param syns:
+        :return:
+        """
+        for pixel, syn in zip(observation, syns):
+            if pixel > 0:
+                stim_num, interval = self._get_poisson_stim(pixel)
                 next_event = 0
                 for e in range(stim_num):
                     syn.make_event(next_event)
                     next_event += interval
 
-    def _get_poisson_stim(self, single_input_value):
+    def _get_poisson_stim(self, pixel):
         stim_num = 0
         stim_int = 0
-        if single_input_value > 0:
-            stim_num = np.random.poisson(self.max_stim_per_stepsize, 1)[0]
+        if pixel > 0:
+            stim_num = np.random.poisson(pixel * self.max_stim_per_stepsize, 1)[0]
             if stim_num > 0:
-                stim_int = self.default_stepsize / stim_num
+                stim_int = self.stepsize / stim_num
         return stim_num, stim_int
 
     def _make_spike_detection(self):

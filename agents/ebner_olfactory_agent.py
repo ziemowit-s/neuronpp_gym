@@ -13,15 +13,15 @@ WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
 class EbnerOlfactoryAgent(EbnerAgent):
-    def __init__(self, output_cell_num, input_max_hz, default_stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, stepsize=20):
         """
         :param output_cell_num:
         :param input_max_hz:
-        :param default_stepsize:
+        :param stepsize:
         """
         self.hidden_cells = []
         self.inhibitory_cells = []
-        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, default_stepsize=default_stepsize)
+        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, stepsize=stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         # INPUTS
@@ -29,7 +29,6 @@ class EbnerOlfactoryAgent(EbnerAgent):
         input_pop = EbnerHebbianPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=WEIGHT, rule='one')
-        input_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         # HIDDEN
         self.hidden_pop = self._make_modulatory_population("hid_1", cell_num=12, source=input_pop)
