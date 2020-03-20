@@ -65,7 +65,9 @@ x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 
 # Create Agent
 agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=100, stepsize=AGENT_STEPSIZE)
-agent.build(input_shape=x_train.shape[1:], x_param=ConvParam(f=4, p=1, s=4), y_param=ConvParam(f=4, p=1, s=4))
+agent.build(input_shape=x_train.shape[1:],
+            x_param=ConvParam(kernel_size=4, padding=1, stride=4),
+            y_param=ConvParam(kernel_size=4, padding=1, stride=4))
 agent.init(init_v=-80, warmup=2000, dt=0.2)
 print("Input neurons:", agent.input_cell_num)
 

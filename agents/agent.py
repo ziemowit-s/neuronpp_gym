@@ -14,11 +14,11 @@ from neuronpp.utils.run_sim import RunSim
 from populations.motor_population import MotorPopulation
 
 AgentOutput = namedtuple("AgentOutput", "cell_name index value")
-ConvParam = namedtuple("ConvParam", "f p s")
+ConvParam = namedtuple("ConvParam", "kernel_size padding stride")
 
 
 class Agent:
-    def __init__(self, output_cell_num, input_max_hz, stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, stepsize):
         self.reward_syns = []
         self.punish_syns = []
 
@@ -26,7 +26,10 @@ class Agent:
 
         self.max_hz = input_max_hz
         self.stepsize = stepsize
-        self.max_stim_per_stepsize = int(round((stepsize * input_max_hz) / 1000))
+        self.max_stim_per_stepsize = (stepsize * input_max_hz) / 1000
+        if self.max_stim_per_stepsize <= 0:
+            raise ValueError("Agent's self.max_stim_per_stepsize must be > 0, choose input_max_hz and stepsize params carefully.")
+        print("max_stim_per_stepsize:", self.max_stim_per_stepsize)
 
         self.sim = None
         self.warmup = None
@@ -51,14 +54,17 @@ class Agent:
         if not isinstance(input_shape, tuple) or len(input_shape) != 2:
             raise ValueError("Input shape can be only a tuple of size 2")
 
-        self.x_kernel_num = self.get_kernel_size(w=input_shape[0], f=x_param.f, p=x_param.p, s=x_param.s)
-        self.y_kernel_num = self.get_kernel_size(w=input_shape[1], f=y_param.f, p=y_param.p, s=y_param.s)
+        self.x_kernel_num = self.get_kernel_size(w=input_shape[1], f=x_param.kernel_size, p=x_param.padding, s=x_param.stride)
+        self.y_kernel_num = self.get_kernel_size(w=input_shape[0], f=y_param.kernel_size, p=y_param.padding, s=y_param.stride)
 
-        self.x_padding = x_param.p
-        self.y_padding = y_param.p
+        self.x_kernel_size = x_param.kernel_size
+        self.y_kernel_size = y_param.kernel_size
 
-        self.x_stride = x_param.s
-        self.y_stride = y_param.s
+        self.x_padding = x_param.padding
+        self.y_padding = y_param.padding
+
+        self.x_stride = x_param.stride
+        self.y_stride = y_param.stride
 
         self.input_shape = input_shape
         self.input_size = np.prod(input_shape)
@@ -253,11 +259,11 @@ class Agent:
         obs = self.pad_observation(obs)
 
         syn_i = 0
-        for y in range(0, self.input_shape[1], self.y_stride):
-            for x in range(0, self.input_shape[0], self.x_stride):
+        for y in range(0, self.input_shape[0], self.y_stride):
+            for x in range(0, self.input_shape[1], self.x_stride):
 
                 current_cell = self.input_cells[syn_i]
-                window = obs[y:y + self.y_kernel_num, x:x + self.x_kernel_num]
+                window = obs[y:y + self.y_kernel_size, x:x + self.x_kernel_size]
 
                 if np.sum(window) > 0:
                     self._make_single_observation(observation=window.flatten(), syns=current_cell.syns)
