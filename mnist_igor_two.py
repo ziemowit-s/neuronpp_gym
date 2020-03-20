@@ -1,17 +1,16 @@
+import argparse
 import sys
 import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from neuronpp.utils.hitmap_graph import HitmapGraph
+from neuronpp.cells.cell import Cell
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 
-from agents.ebner_agent import EbnerAgent
-from neuronpp.cells.cell import Cell
-from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
 from agents.ebner_olfactory_agent import WEIGHT
+from populations.ebner_hebbian_population import EbnerHebbianPopulation
 
 # print(sys.path)
 # sys.path.extend('/Users/igor/git/neuronpp/neuronpp')
@@ -67,7 +66,7 @@ class EbOlAg(EbnerOlfactoryAgent):
                                         netcon_weight=0.1)
 
         # OUTPUTS
-        #info generate output population as a modulatory (?) one
+        # info generate output population as a modulatory (?) one
         output_pop = self._make_modulatory_population("out_3", cell_num=output_cell_num, source=self.hidden_pop)
 
         return input_pop.cells, output_pop.cells
@@ -132,13 +131,14 @@ def make_imshow(x_train, x_pixel_size, y_pixel_size):
     return obj, ax
 
 
-AGENT_STEPSIZE = 10
+AGENT_STEPSIZE = 50
 MNIST_LABELS = 3
 SKIP_PIXELS = 2
 INPUT_CELL_NUM = 9
+DT = 0.2
 
 
-def main():
+def main(display_interval):
     x_train, y_train = mnist_prepare(num=MNIST_LABELS)
     x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
     input_size = x_train.shape[1] * x_train.shape[2]
@@ -148,12 +148,12 @@ def main():
     # agent = EbnerOlfactoryAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
     #                             output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
     agent = EbOlAg(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
-                                output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
-    agent.init(init_v=-80, warmup=2000, dt=0.3)
+                   output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+    agent.init(init_v=-80, warmup=10000, dt=DT)
 
     # warning what is the heatmap showing here???
     hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
-    hitmap_graph = HitmapGraph(cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
+    # hitmap_graph = SpikesHeatmapGraph(name="MNIST heatmap", cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
 
     # info get input size
     x_pixel_size, y_pixel_size = agent.get_input_cell_observation_shape(x_train[0])
@@ -161,7 +161,7 @@ def main():
     print('pixels per input cell:', input_syn_per_cell)
 
     # todo display one beside the other, not over
-    obj, ax = make_imshow(x_train, x_pixel_size=x_pixel_size, y_pixel_size=y_pixel_size)
+    # obj, ax = make_imshow(x_train, x_pixel_size=x_pixel_size, y_pixel_size=y_pixel_size)
 
     agent_compute_time = 0
     agent_observe = True
@@ -179,6 +179,9 @@ def main():
     correct_arr = np.zeros(MNIST_LABELS, dtype=int)
     predict_arr = np.zeros(MNIST_LABELS, dtype=int)
     processed = 0
+    # info lists of last truue and predicted;
+    last_true = []
+    last_predicted = []
     while True:
         # info read the current input
         y = y_train[index]
@@ -201,6 +204,8 @@ def main():
             predicted = output.index
             predict_arr[predicted] += 1
 
+        last_true.append(y)
+        last_predicted.append(predicted)
         if predicted == y:
             reward = 1
             correct_arr[predicted] += 1
@@ -215,26 +220,34 @@ def main():
         # write time after agent step
         agent_compute_time = time.time()
 
-        # info update input image image
-        obj.set_data(obs)
-
-        display_interval = 10
-        if processed % display_interval == 0:
-            ax.set_title('Predicted: %s True: %s' % (predicted, y))
+        last_predicted = last_predicted[-display_interval:]
+        last_true = last_true[-display_interval:]
+        if processed > 0 and processed % display_interval == 0:
+            # info update input image image
+            # obj.set_data(obs)
+            # ax.set_title('Predicted: %s True: %s' % (predicted, y))
             # info update weights in graph
-            graph.update_spikes(agent.sim.t)
-            graph.update_weights('w')
+            # graph.update_spikes(agent.sim.t)
+            # graph.update_weights('w')
             # info update heatmap
-            hitmap_graph.plot()
+            # hitmap_graph.plot()
             plt.draw()
             plt.pause(1e-9)
+            # agent.rec_input.plot(animate=True, position=(4, 4))
+            # info display output act for last display_interval examples
+            # info left AGENT_STEPSIZE / DT for additional steps on the left of display
+            agent.rec_output.plot(animate=True,
+                                  steps=int(AGENT_STEPSIZE / DT + 2 * display_interval * AGENT_STEPSIZE / DT),
+                                  true_class=last_true, pred_class=last_predicted, stepsize=AGENT_STEPSIZE, dt=DT)
+
         index += 1
         processed += 1
-        if index == y_train.shape[0]: index = 0
-
-        # agent.rec_input.plot(animate=True, position=(4, 4))
-        # agent.rec_output.plot(animate=True)
+        if index == y_train.shape[0]:
+            index = 0
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--display", help="display interval", default=10, type=int)
+    args = parser.parse_args()
+    main(display_interval=args.display)

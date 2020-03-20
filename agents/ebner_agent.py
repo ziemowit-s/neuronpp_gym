@@ -1,12 +1,12 @@
 import numpy as np
-
 from neuronpp.utils.record import Record
+
 from agents.agent import Agent
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from populations.ebner_modulatory_population import EbnerModulatoryPopulation
 
-WEIGHT = 0.0035  # From Ebner et al. 2019
-
+WEIGHT  = 0.0035  # From Ebner et al. 2019
+EPSILON = 0.001
 
 class EbnerAgent(Agent):
     def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
@@ -24,7 +24,8 @@ class EbnerAgent(Agent):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
         input_pop = EbnerHebbianPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
-        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=WEIGHT, rule='one')
+        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1,
+                          netcon_weight=np.max((0, WEIGHT + np.random.normal(loc=0.0, scale=EPSILON))), rule='one')
         input_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         output_pop = self._make_modulatory_population("out_1", cell_num=output_cell_num, source=input_pop)
@@ -40,9 +41,11 @@ class EbnerAgent(Agent):
         pop = EbnerModulatoryPopulation(name)
         pop.create(cell_num)
 
+        # info draw netcon_weights from N(WEIGHT, epsilon)
+        # todo what should be the epsilon value? WEIGHT is small (=0.0035)
         syns = pop.connect(source=source, syn_num_per_source=syn_per_cell,
-                           delay=1, netcon_weight=WEIGHT, ach_weight=1, da_weight=1, rule='all',
-                           ACh_tau=50, Da_tau=50)
+                           delay=1, netcon_weight=np.max((0, WEIGHT + np.random.normal(loc=0.0, scale=EPSILON))),
+                           ach_weight=1, da_weight=1, rule='all', ACh_tau=50, Da_tau=50)
 
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
