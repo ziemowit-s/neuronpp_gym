@@ -13,17 +13,17 @@ WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
 class EbnerOlfactoryAgent(EbnerAgent):
-    def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
+    def __init__(self, input_cell_num, input_shape, output_size, input_max_hz, default_stepsize=20):
         """
         :param input_cell_num:
-        :param input_size:
+        :param input_shape:
         :param output_size:
         :param input_max_hz:
         :param default_stepsize:
         """
         self.hidden_cells = []
         self.inhibitory_cells = []
-        super().__init__(input_cell_num=input_cell_num, input_size=input_size, output_size=output_size,
+        super().__init__(input_cell_num=input_cell_num, input_shape=input_shape, output_size=output_size,
                          input_max_hz=input_max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):

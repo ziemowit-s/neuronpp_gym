@@ -9,15 +9,15 @@ WEIGHT  = 0.0035  # From Ebner et al. 2019
 EPSILON = 0.001
 
 class EbnerAgent(Agent):
-    def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
+    def __init__(self, input_cell_num, input_shape, output_size, input_max_hz, default_stepsize=20):
         """
         :param input_cell_num:
-        :param input_size:
+        :param input_shape:
         :param output_size:
         :param input_max_hz:
         :param default_stepsize:
         """
-        super().__init__(input_cell_num=input_cell_num, input_size=input_size, output_size=output_size,
+        super().__init__(input_cell_num=input_cell_num, input_shape=input_shape, output_size=output_size,
                          input_max_hz=input_max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
@@ -40,6 +40,7 @@ class EbnerAgent(Agent):
     def _make_modulatory_population(self, name, cell_num, source=None, syn_per_cell=1):
         pop = EbnerModulatoryPopulation(name)
         pop.create(cell_num)
+        pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         # info draw netcon_weights from N(WEIGHT, epsilon)
         # todo what should be the epsilon value? WEIGHT is small (=0.0035)

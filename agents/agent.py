@@ -1,5 +1,6 @@
 import abc
 from collections import namedtuple
+from math import ceil, floor
 from typing import List
 
 import numpy as np
@@ -13,15 +14,30 @@ from neuronpp.utils.run_sim import RunSim
 from populations.motor_population import MotorPopulation
 
 AgentOutput = namedtuple("AgentOutput", "cell_name index value")
-
+Basket = namedtuple("Basket", "cell, size")
 
 class Agent:
-    def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
+    def __init__(self, input_cell_num: int, input_shape: tuple, output_size: int, input_max_hz: int, default_stepsize: int = 20):
+        """
+        :param input_cell_num:
+            Number of input cells
+        :param input_shape:
+            tuple which specify input shape
+            1 or 2 dimentional input is accepted, so input_shape must be a tuple of 1 or 2 elements
+        :param output_size:
+        :param input_max_hz:
+        :param default_stepsize:
+        """
+        if not isinstance(input_shape, tuple) or len(input_shape) == 0 or len(input_shape) > 2:
+            raise ValueError("Param input_shape must be a tuple of 1 or 2 elements, but provided: %s" % input_shape)
+
         self.reward_syns = []
         self.punish_syns = []
 
         self.input_cell_num = input_cell_num
-        self.input_size = input_size
+        self.input_shape = input_shape
+        self.input_ndim = len(input_shape)
+        self.input_size = np.prod(input_shape)
         self.output_size = output_size
 
         self.max_hz = input_max_hz
@@ -29,8 +45,8 @@ class Agent:
         self.max_stim_per_stepsize = (default_stepsize * input_max_hz) / 1000
 
         self.input_cells, self.output_cells = self._build_network(input_cell_num=input_cell_num,
-                                                                  input_size=input_size, output_cell_num=output_size)
-
+                                                                  input_size=self.input_size, output_cell_num=output_size)
+        self.input_baskets = self._make_input_baskets()
         self._make_motor_cells(output_cells=self.output_cells, output_cell_num=output_size)
         self._make_records()
 
@@ -65,28 +81,10 @@ class Agent:
     def _make_records(self):
         raise NotImplementedError()
 
-    @staticmethod
-    def _select_best_output(output: list, epsilon: int = 1) -> list:
+    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None):
         """
-        From list of AgentOutput rates select these at least out_epsilon higher than
-        :param output: list of AgentOutput activation rates found
-        :param epsilon: the minimal distance
-        :return: best output list
-        """
-        if len(output) < 2:
-            return output
-        best_val = output[0].value
-        while len(output) > 1:
-            if output[-1].value <= best_val - epsilon:
-                output.pop()
-            else:
-                break
-        return output
-
-    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None, out_epsilon=1):
-        """
-        Run a simulation step returning a list of activations for all motor agents
         :param observation:
+            must be of the same shape as self.input_shape (specified in the constructor param input_shape)
         :param reward:
         :param stepsize:
         :param output_type:
@@ -95,8 +93,8 @@ class Agent:
             "raw": returns raw array for each motor cell of all spikes in time in ms.
         :param sort_func:
             Optional function which define sorting on list of AgentOutput objects.
-        :param out_epsilon: minimal difference between returned elements' rate and the rest
-        :return: list(AgentOutput(index, cell_name, value))
+        :return:
+            list(AgentOutput(index, cell_name, value))
         """
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
@@ -105,14 +103,21 @@ class Agent:
             raise LookupError("Method self._build_network() must return tuple(input_cells, output_cells), "
                               "however input_cells were not defined.")
 
+        # Make observation
         if observation is not None:
-            dim = observation.ndim
-            if dim == 1:
+            if self.input_ndim != observation.ndim:
+                raise RuntimeError("Dimention of the oservation is different than input_shape dimention "
+                                   "specified while constructing the agent.")
+            for i, o in zip(self.input_shape, observation.shape):
+                if i != o:
+                    raise RuntimeError("Observation and input_shape specified while constructing the agent must be the same")
+
+            if self.input_ndim == 1:
                 self._make_1d_observation(observation)
-            elif dim == 2:
-                self._make_2d_observation(observation)
-            else:
-                raise RuntimeError("Observation can be 1D or 2D, but provided %sD" % dim)
+            elif self.input_ndim == 2:
+                self._get_2d_observation_baskets(observation)
+
+        # Make reward
         if reward is not None and reward != 0:
             self.make_reward(reward)
 
@@ -121,11 +126,10 @@ class Agent:
             stepsize = self.default_stepsize
         self.sim.run(stepsize)
 
+        # Prepare output
         output = self._get_output(output_type)
         if sort_func:
             output = sorted(output, key=sort_func)
-        if out_epsilon > 0:
-            output = self._select_best_output(output=output, epsilon=out_epsilon)
         return output
 
     def make_reward_step(self, reward, stepsize=None):
@@ -195,56 +199,6 @@ class Agent:
 
         return outputs
 
-    def _make_1d_observation(self, observation):
-        """
-        :param observation:
-        :return:
-            list of names of stimulated cells in the stimulation order
-        """
-        syns = []
-        for c in self.input_cells:
-            for i, s in enumerate(c.syns):
-                syns.append(s)
-                if i == len(observation):
-                    break
-        self._make_single_observation(observation, syns)
-
-    def _make_2d_observation(self, observation, x_stride: int = None, y_stride: int = None):
-        """
-        :param observation:
-        :param x_stride:
-            If None - will be of x_window size
-        :param y_stride:
-            If None - will be of y_window size
-        :return:
-            list of names of stimulated cells in the stimulation order
-        """
-        x_shape = observation.shape[1]
-        y_shape = observation.shape[0]
-        x_window_size, y_window_size = self.get_input_cell_observation_shape(observation)
-        if x_stride is None:
-            x_stride = x_window_size
-        if y_stride is None:
-            y_stride = y_window_size
-
-        syn_i = 0
-        for y in range(0, y_shape, y_stride):
-            for x in range(0, x_shape, x_stride):
-                current_cell = self.input_cells[syn_i]
-                window = observation[y:y + y_window_size, x:x + x_window_size]
-                if np.sum(window) > 0:
-                    self._make_single_observation(observation=window.flatten(), syns=current_cell.syns)
-                syn_i += 1
-
-    def _make_single_observation(self, observation, syns):
-        for obs, syn in zip(observation, syns):
-            if obs > 0:
-                stim_num, interval = self._get_poisson_stim(obs)
-                next_event = 0
-                for e in range(stim_num):
-                    syn.make_event(next_event)
-                    next_event += interval
-
     def _get_poisson_stim(self, single_input_value):
         stim_num = 0
         stim_int = 0
@@ -278,7 +232,7 @@ class Agent:
         rec_m = [cell.filter_secs(sec_name)(loc) for cell in cells]
         return Record(rec_m, variables=variables)
 
-    def get_input_cell_observation_shape(self, observation):
+    def _get_2d_basket_shape(self, observation):
         div = np.sqrt(len(self.input_cells))
         x_shape = observation.shape[1]
         y_shape = observation.shape[0]
@@ -286,3 +240,44 @@ class Agent:
         x_pixel_size = int(np.ceil(x_shape / div))
         y_pixel_size = int(np.ceil(y_shape / div))
         return x_pixel_size, y_pixel_size
+
+    def _get_1d_basket_size(self, observation):
+        return ceil(len(observation)/len(self.input_cells))
+
+    def _make_input_baskets(self):
+        baskets = []
+
+        if self.input_ndim == 1:
+            basket_sizes = self._get_1d_baskets(shape_size=self.input_size, cells_num=self.input_cell_num)
+            for i, x in enumerate(basket_sizes):
+                baskets.append(Basket(cell=self.input_cells[i], size=x))
+
+        elif self.input_ndim == 2:
+            basket_sizes_x = self._get_1d_baskets(shape_size=self.input_shape[0], cells_num=self.input_cell_num)
+            basket_sizes_y = self._get_1d_baskets(shape_size=self.input_shape[1], cells_num=self.input_cell_num)
+            for i, (x, y) in enumerate(zip(basket_sizes_x, basket_sizes_y)):
+                baskets.append(Basket(cell=self.input_cells[i], size=x*y))
+        else:
+            raise RuntimeError("Input dimention can be only 1 or 2, but provided: %s" % self.input_ndim)
+
+        print(sum([b.size for b in baskets]), np.prod(self.input_shape))
+        return baskets
+
+    def _get_1d_baskets(self, shape_size, num):
+        inputs_per_cell = shape_size / num
+        inputs_per_cell_int = int(floor(inputs_per_cell))
+        input_mod = inputs_per_cell % inputs_per_cell_int
+
+        new_cell = 0
+        result = []
+        for i in range(num):
+            size = inputs_per_cell_int
+
+            new_cell += input_mod
+            if new_cell >= 1:
+                size += 1
+                new_cell -= 1
+
+            result.append(size)
+
+        return result
