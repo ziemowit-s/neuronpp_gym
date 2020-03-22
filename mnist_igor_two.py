@@ -131,7 +131,19 @@ def make_imshow(x_train, x_pixel_size, y_pixel_size):
     return obj, ax
 
 
-AGENT_STEPSIZE = 50
+def select_best_output(output: list, epsilon=1) -> list:
+    if len(output) < 2:
+        return output
+    best_val = output[0].value
+    while True:
+        if output[-1].value <= best_val - epsilon:
+            output.pop()
+        else:
+            break
+    return output
+
+
+AGENT_STEPSIZE = 40
 MNIST_LABELS = 3
 SKIP_PIXELS = 2
 INPUT_CELL_NUM = 9
@@ -149,7 +161,8 @@ def main(display_interval):
     #                             output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
     agent = EbOlAg(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
                    output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
-    agent.init(init_v=-80, warmup=10000, dt=DT)
+    # todo set warmup so that it is at least equal to the display_interval
+    agent.init(init_v=-80, warmup=max(10000, int(display_interval * 2 * AGENT_STEPSIZE / DT)), dt=DT)
 
     # warning what is the heatmap showing here???
     hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
@@ -173,7 +186,7 @@ def main(display_interval):
     # the first to start from
     index = 0
     graph = NetworkStatusGraph(cells=[c for c in agent.cells if not "mot" in c.name])
-    graph.plot()
+    # graph.plot()
 
     # %%
     correct_arr = np.zeros(MNIST_LABELS, dtype=int)
@@ -196,12 +209,19 @@ def main(display_interval):
             stepsize = None
 
         # info compute the agent activation
-        output = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)[0]
+        # warning agent.step called ... = agent.step(...)[0] selects _only_ the first element in sorted
+        # warning list
+        # todo should return a list of all Agents with largest and equal values
+        # info then we can decide what to do if more than one are selected
+        output = agent.step(observation=obs, stepsize=int(AGENT_STEPSIZE), output_type="rate",
+                            sort_func=lambda x: -x.value, out_epsilon=1)
 
-        # info get the predicted value and compare with the correct one
         predicted = -1
-        if output.value > -1:
-            predicted = output.index
+        # info get the predicted value and compare with the correct one
+        # info we take as predicted only if only one class was predicted, i.e. one had the rate higher than the other
+        # todo agent.step zwraca value==0 dla 'rate' co jest bez sensu, bo powinien zwracac -1 jesli nie bylo spike-ow
+        if len(output) == 1 and output[0].value > 0:
+            predicted = output[0].index
             predict_arr[predicted] += 1
 
         last_true.append(y)
@@ -213,6 +233,7 @@ def main(display_interval):
                   "\t({:.3f}%)".format(np.sum(correct_arr) / (processed + 1)))
         else:
             reward = -1
+            reward = -0.5
         # info reward the agent accordingly to the output
         # todo look carefully inside
         agent.make_reward_step(reward=reward)
@@ -232,13 +253,13 @@ def main(display_interval):
             # info update heatmap
             # hitmap_graph.plot()
             plt.draw()
-            plt.pause(1e-9)
             # agent.rec_input.plot(animate=True, position=(4, 4))
             # info display output act for last display_interval examples
             # info left AGENT_STEPSIZE / DT for additional steps on the left of display
             agent.rec_output.plot(animate=True,
                                   steps=int(AGENT_STEPSIZE / DT + 2 * display_interval * AGENT_STEPSIZE / DT),
                                   true_class=last_true, pred_class=last_predicted, stepsize=AGENT_STEPSIZE, dt=DT)
+            plt.pause(1e-8)
 
         index += 1
         processed += 1

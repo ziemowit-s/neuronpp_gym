@@ -65,9 +65,27 @@ class Agent:
     def _make_records(self):
         raise NotImplementedError()
 
-    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None):
+    @staticmethod
+    def _select_best_output(output: list, epsilon: int = 1) -> list:
         """
+        From list of AgentOutput rates select these at least out_epsilon higher than
+        :param output: list of AgentOutput activation rates found
+        :param epsilon: the minimal distance
+        :return: best output list
+        """
+        if len(output) < 2:
+            return output
+        best_val = output[0].value
+        while len(output) > 1:
+            if output[-1].value <= best_val - epsilon:
+                output.pop()
+            else:
+                break
+        return output
 
+    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None, out_epsilon=1):
+        """
+        Run a simulation step returning a list of activations for all motor agents
         :param observation:
         :param reward:
         :param stepsize:
@@ -77,8 +95,8 @@ class Agent:
             "raw": returns raw array for each motor cell of all spikes in time in ms.
         :param sort_func:
             Optional function which define sorting on list of AgentOutput objects.
-        :return:
-            list(AgentOutput(index, cell_name, value))
+        :param out_epsilon: minimal difference between returned elements' rate and the rest
+        :return: list(AgentOutput(index, cell_name, value))
         """
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
@@ -106,6 +124,8 @@ class Agent:
         output = self._get_output(output_type)
         if sort_func:
             output = sorted(output, key=sort_func)
+        if out_epsilon > 0:
+            output = self._select_best_output(output=output, epsilon=out_epsilon)
         return output
 
     def make_reward_step(self, reward, stepsize=None):
