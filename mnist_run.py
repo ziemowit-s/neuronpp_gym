@@ -1,13 +1,11 @@
 import time
-from typing import List
-
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from neuronpp.cells.cell import Cell
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 from neuronpp.utils.spikes_heatmap_graph import SpikesHeatmapGraph
 
+from agents.agent import ConvParam
 from agents.ebner_agent import EbnerAgent
 from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
 
@@ -32,53 +30,52 @@ def mnist_prepare(num=10):
     return x_train, y_train
 
 
-def make_mnist_imshow(x_train, agent, input_cells: List[Cell] = None):
+def make_mnist_imshow(x_train, agent):
     """
     Prepare image show to update on each steps. It will also show receptive field of each input neuron
+    :param agent:
     :param x_train:
         whole mnist trainset
-    :param input_cells:
     :return:
     """
     fig, ax = plt.subplots(1, 1)
-    x_pixel_size, y_pixel_size = agent.get_2d_basket_shape(x_train[0])
+    template = agent.pad_observation(x_train[0])
 
-    x_ticks = np.arange(0, x_train.shape[1], x_pixel_size)
-    y_ticks = np.arange(0, x_train.shape[2], y_pixel_size)
+    x_ticks = np.arange(0, template.shape[0], agent.x_stride)
+    y_ticks = np.arange(0, template.shape[1], agent.y_stride)
 
-    # set major lines (receptive fields for each cell)
     ax.set_xticks(x_ticks)
-    ax.set_xticks([i for i in range(x_train.shape[1])], minor=True)
-    ax.grid(which='minor', alpha=0.2)
-
-    # set minor lines (each pixel marked)
+    ax.set_xticks([i for i in range(template.shape[0])], minor=True)
     ax.set_yticks(y_ticks)
-    ax.set_yticks([i for i in range(x_train.shape[2])], minor=True)
-    ax.grid(which='major', alpha=1)
+    ax.set_yticks([i for i in range(template.shape[1])], minor=True)
 
-    obj = ax.imshow(x_train[0], cmap=plt.get_cmap('gray'), extent=[0, x_train.shape[1], 0, x_train.shape[2]])
+    obj = ax.imshow(x_train[0], cmap=plt.get_cmap('gray'), extent=[0, template.shape[0], 0, template.shape[1]])
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=1)
     return obj, ax
 
 
-# Global parameters for the run
-AGENT_STEPSIZE = 50  # in ms - how long agent will look on a single mnist image
+AGENT_STEPSIZE = 60  # in ms - how long agent will look on a single mnist image
 MNIST_LABELS = 3  # how much mnist digits we want
 SKIP_PIXELS = 2  # how many pixels on mnist we want to skip (image will make smaller)
-INPUT_CELL_NUM = 36  # how much input cells agent will have
 
 # Prepare mnist dataset
 x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 
 # Create Agent
-agent = EbnerAgent(input_cell_num=INPUT_CELL_NUM, input_shape=x_train.shape[1:], output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
-agent.init(init_v=-80, warmup=2000, dt=0.3)
+agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=100, stepsize=AGENT_STEPSIZE)
+agent.build(input_shape=x_train.shape[1:],
+            x_param=ConvParam(kernel_size=4, padding=1, stride=4),
+            y_param=ConvParam(kernel_size=4, padding=1, stride=4))
+agent.init(init_v=-80, warmup=2000, dt=0.2)
+print("Input neurons:", agent.input_cell_num)
 
 # Show and update mnist image
-obj, ax = make_mnist_imshow(agent=agent, x_train=x_train)
+imshow_obj, ax = make_mnist_imshow(x_train, agent)
 
 # Create heatmap graph for input cells
-hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
+hitmap_shape = int(np.ceil(np.sqrt(agent.input_cell_num)))
 hitmap_graph = SpikesHeatmapGraph(name="Input Cells", cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
 
 # Create network graph
@@ -115,10 +112,6 @@ while True:
         print("i:", index, "reward recognized", y)
     else:
         reward = -1
-    agent.make_reward_step(reward=reward)
-
-    # Write time after agent step
-    agent_compute_time = time.time()
 
     # Update graphs
     network_graph.update_spikes(agent.sim.t)
@@ -126,10 +119,15 @@ while True:
     hitmap_graph.plot()
 
     # Update visualizations
-    obj.set_data(obs)
+    imshow_obj.set_data(agent.pad_observation(obs))
     ax.set_title('Predicted: %s True: %s' % (predicted, y))
     plt.draw()
     plt.pause(1e-9)
+
+    # Make reward step
+    agent.make_reward_step(reward=reward, stepsize=50)
+    # Write time after agent step
+    agent_compute_time = time.time()
 
     # increment mnist image index
     index += 1

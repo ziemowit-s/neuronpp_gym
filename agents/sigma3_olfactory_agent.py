@@ -9,18 +9,15 @@ from populations.sigma3_modulatory_population import Sigma3ModulatoryPopulation
 
 
 class Sigma3OlfactoryAgent(Agent):
-    def __init__(self, input_cell_num, input_shape, output_size, input_max_hz, default_stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, stepsize=20):
         """
-        :param input_cell_num:
-        :param input_shape:
-        :param output_size:
+        :param output_cell_num:
         :param input_max_hz:
-        :param default_stepsize:
+        :param stepsize:
         """
         self.hidden_cells = []
         self.inhibitory_cells = []
-        super().__init__(input_cell_num=input_cell_num, input_shape=input_shape, output_size=output_size,
-                         input_max_hz=input_max_hz, default_stepsize=default_stepsize)
+        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, stepsize=stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
@@ -29,7 +26,7 @@ class Sigma3OlfactoryAgent(Agent):
         input_pop = Sigma3HebbianPopulation("inp_0")
         input_pop.create(input_cell_num)
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell,
-                          delay=1, netcon_weight=0.01, rule='one')
+                          delay=1, netcon_weight=0.1, rule='one')
         # HIDDEN
         self.hidden_pop = self._make_modulatory_population("hid_2", cell_num=12, source=input_pop)
         self.hidden_cells = self.hidden_pop.cells
@@ -73,5 +70,8 @@ class Sigma3OlfactoryAgent(Agent):
                                mod_name="Exp2Syn", e=-90)
 
     def _make_records(self):
-        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.hidden_cells]
-        self.rec_hidden = Record(rec0, variables='v')
+        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
+        self.rec_input = Record(rec0, variables='v')
+
+        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
+        self.rec_output = Record(rec1, variables='v')

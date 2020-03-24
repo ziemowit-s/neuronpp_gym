@@ -1,6 +1,6 @@
 import abc
+import math
 from collections import namedtuple
-from math import ceil, floor
 from typing import List
 
 import numpy as np
@@ -15,9 +15,12 @@ from populations.motor_population import MotorPopulation
 
 AgentOutput = namedtuple("AgentOutput", "cell_name index value")
 Basket = namedtuple("Basket", "cell, size")
+ConvParam = namedtuple("ConvParam", "kernel_size padding stride")
+
 
 class Agent:
-    def __init__(self, input_cell_num: int, input_shape: tuple, output_size: int, input_max_hz: int, default_stepsize: int = 20):
+    def __init__(self, input_cell_num: int, input_shape: tuple, output_size: int, input_max_hz: int,
+                 default_stepsize: int = 20):
         """
         :param input_cell_num:
             Number of input cells
@@ -31,27 +34,78 @@ class Agent:
         if not isinstance(input_shape, tuple) or len(input_shape) == 0 or len(input_shape) > 2:
             raise ValueError("Param input_shape must be a tuple of 1 or 2 elements, but provided: %s" % input_shape)
 
+    def __init__(self, output_cell_num, input_max_hz, stepsize):
         self.reward_syns = []
         self.punish_syns = []
 
-        self.input_cell_num = input_cell_num
-        self.input_shape = input_shape
-        self.input_ndim = len(input_shape)
-        self.input_size = np.prod(input_shape)
-        self.output_size = output_size
+        self.output_cell_num = output_cell_num
 
         self.max_hz = input_max_hz
-        self.default_stepsize = default_stepsize
-        self.max_stim_per_stepsize = (default_stepsize * input_max_hz) / 1000
-
-        self.input_cells, self.output_cells = self._build_network(input_cell_num=input_cell_num,
-                                                                  input_size=self.input_size, output_cell_num=output_size)
-        self.input_baskets = self._make_input_baskets()
-        self._make_motor_cells(output_cells=self.output_cells, output_cell_num=output_size)
-        self._make_records()
+        self.stepsize = stepsize
+        self.max_stim_per_stepsize = (stepsize * input_max_hz) / 1000
+        if self.max_stim_per_stepsize <= 0:
+            raise ValueError(
+                "Agent's self.max_stim_per_stepsize must be > 0, choose input_max_hz and stepsize params carefully.")
+        print("max_stim_per_stepsize:", self.max_stim_per_stepsize)
 
         self.sim = None
         self.warmup = None
+        self.input_size = None
+        self.input_shape = None
+        self.input_cells = None
+        self.output_cells = None
+        self.input_cell_num = None
+
+        self.x_padding = None
+        self.y_padding = None
+        self.x_stride = None
+        self.y_stride = None
+
+        self._agent_builded = False
+
+    def build(self, input_shape: tuple, x_param: ConvParam, y_param: ConvParam):
+        if self.sim is not None:
+            raise RuntimeError("You must first build agent before initialisation.")
+        if self.sim is not None:
+            raise RuntimeError("Simulation cannot been run before build.")
+        if not isinstance(input_shape, tuple) or len(input_shape) != 2:
+            raise ValueError("Input shape can be only a tuple of size 2")
+
+        self.x_kernel_num = self.get_kernel_size(w=input_shape[1], f=x_param.kernel_size, p=x_param.padding,
+                                                 s=x_param.stride)
+        self.y_kernel_num = self.get_kernel_size(w=input_shape[0], f=y_param.kernel_size, p=y_param.padding,
+                                                 s=y_param.stride)
+
+        self.x_kernel_size = x_param.kernel_size
+        self.y_kernel_size = y_param.kernel_size
+
+        self.x_padding = x_param.padding
+        self.y_padding = y_param.padding
+
+        self.x_stride = x_param.stride
+        self.y_stride = y_param.stride
+
+        self.input_shape = input_shape
+        self.input_size = np.prod(input_shape)
+        self.input_cell_num = self.x_kernel_num * self.y_kernel_num
+
+        self.input_cells, self.output_cells = self._build_network(input_cell_num=self.input_cell_num,
+                                                                  input_size=self.input_size,
+                                                                  output_cell_num=self.output_cell_num)
+
+        if len(self.input_cells) != self.input_cell_num:
+            raise ValueError(
+                "Based on Kernel size input_cell_num is %s, however input_cells returned by _build_network() is: %s" %
+                (self.input_cell_num, len(self.input_cells)))
+
+        if len(self.output_cells) != self.output_cell_num:
+            raise ValueError(
+                "Based on Kernel size output_cell_num is %s, however output_cells returned by _build_network() is: %s" %
+                (self.output_cell_num, len(self.output_cells)))
+
+        self._make_motor_cells(output_cells=self.output_cells, output_cell_num=self.output_cell_num)
+        self._make_records()
+        self._agent_builded = True
 
     def init(self, init_v=-70, warmup=0, dt=0.1):
         """
@@ -61,7 +115,7 @@ class Agent:
         :return:
         """
         if self.sim is not None:
-            raise RuntimeError("Agent have been previously initialized.")
+            raise RuntimeError("Simulation cannot been run before initialization.")
 
         self.warmup = warmup
         self.sim = RunSim(init_v=init_v, warmup=warmup, dt=dt)
@@ -81,21 +135,44 @@ class Agent:
     def _make_records(self):
         raise NotImplementedError()
 
-    def step(self, observation=None, reward=None, stepsize=None, output_type="time", sort_func=None):
+    @staticmethod
+    def _select_best_output(output: list, epsilon: int = 1) -> list:
+        """
+        From list of AgentOutput rates select these at least out_epsilon higher than
+        :param output: list of AgentOutput activation rates found
+        :param epsilon: the minimal distance
+        :return: best output list
+        """
+        if len(output) < 2:
+            return output
+        best_val = output[0].value
+        while len(output) > 1:
+            if output[-1].value <= best_val - epsilon:
+                output.pop()
+            else:
+                break
+        return output
+
+    def step(self, observation=None, reward=None, output_type="time", sort_func=None, epsilon=1):
         """
         :param observation:
             must be of the same shape as self.input_shape (specified in the constructor param input_shape)
         :param reward:
-        :param stepsize:
         :param output_type:
             "time": returns time of first spike for each motor cells.
             "rate": returns number of spikes for each motor cells OR -1 if there were no spike for the cell.
             "raw": returns raw array for each motor cell of all spikes in time in ms.
         :param sort_func:
             Optional function which define sorting on list of AgentOutput objects.
+        :param epsilon: the minimal difference of rate for the outputs returned
         :return:
             list(AgentOutput(index, cell_name, value))
         """
+        # Check agent's built and initialization before step
+        if not self._agent_builded:
+            raise RuntimeError(
+                "Before step you need to build() agent and then initialize by calling init() function first.")
+
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
 
@@ -105,42 +182,41 @@ class Agent:
 
         # Make observation
         if observation is not None:
-            if self.input_ndim != observation.ndim:
-                raise RuntimeError("Dimention of the oservation is different than input_shape dimention "
-                                   "specified while constructing the agent.")
-            for i, o in zip(self.input_shape, observation.shape):
-                if i != o:
-                    raise RuntimeError("Observation and input_shape specified while constructing the agent must be the same")
-
-            if self.input_ndim == 1:
-                self._make_1d_observation(observation)
-            elif self.input_ndim == 2:
-                self._get_2d_observation_baskets(observation)
+            if observation.ndim != 2:
+                raise ValueError("Observation must be a numpy array of dim 2")
+            if self.input_size != observation.size:
+                raise RuntimeError(
+                    "Observation must be of same size as self.input_size, which is a product of input_shape.")
+            self._make_observation(observation)
 
         # Make reward
         if reward is not None and reward != 0:
             self.make_reward(reward)
 
         # Run
-        if stepsize is None:
-            stepsize = self.default_stepsize
-        self.sim.run(stepsize)
+        self.sim.run(self.stepsize)
 
-        # Prepare output
+        # Make output
         output = self._get_output(output_type)
         if sort_func:
             output = sorted(output, key=sort_func)
+            if epsilon > 0:
+                output = self._select_best_output(output=output, epsilon=epsilon)
         return output
 
     def make_reward_step(self, reward, stepsize=None):
         self.make_reward(reward)
         if stepsize is None:
-            stepsize = self.default_stepsize
+            stepsize = self.stepsize
         self.sim.run(stepsize)
 
     def make_reward(self, reward):
+        if not self._agent_builded:
+            raise RuntimeError("Before making reward you need to build the Agent by calling build() function first.")
         if self.sim is None:
-            raise RuntimeError("Before making reward you need to initialize the Agent by calling init() function first.")
+            raise RuntimeError(
+                "Before making reward you need to initialize the Agent by calling init() function first.")
+
         if reward > 0:
             for s in self.reward_syns:
                 s.make_event(1)
@@ -160,6 +236,28 @@ class Agent:
             if c not in result:
                 result.append(c)
         return result
+
+    def pad_observation(self, obs):
+        if not self._agent_builded:
+            raise RuntimeError(
+                "Before calling pad_observation() you need to build the Agent by calling build() function first.")
+        return np.pad(obs, (self.x_padding, self.y_padding), 'constant', constant_values=(0, 0))
+
+    @staticmethod
+    def get_kernel_size(w, f, p, s):
+        """
+        :param w:
+            image size of one of dimentions
+        :param f:
+            convolution size of one of dimentions
+        :param p:
+            padding
+        :param s:
+            stride
+        :return:
+            size of kernel for one of dimention
+        """
+        return math.floor((w - f + 2 * p) / s + 1)
 
     def _get_recursive_cells(self, obj):
         acc = []
@@ -188,7 +286,7 @@ class Agent:
             spikes = np.array([i for i in c.get_spikes() if i >= min_time])
 
             if output_type == "rate":
-                s = len(spikes)
+                s = len(spikes) if len(spikes) > 0 else -1
             elif output_type == "time":
                 s = spikes[0] if len(spikes) > 0 else -1
             elif output_type == "raw":
@@ -199,13 +297,48 @@ class Agent:
 
         return outputs
 
-    def _get_poisson_stim(self, single_input_value):
+    def _make_observation(self, obs):
+        """
+        :param obs:
+        :return:
+            list of names of stimulated cells in the stimulation order
+        """
+        obs = self.pad_observation(obs)
+
+        syn_i = 0
+        for y in range(0, self.input_shape[0], self.y_stride):
+            for x in range(0, self.input_shape[1], self.x_stride):
+
+                current_cell = self.input_cells[syn_i]
+                window = obs[y:y + self.y_kernel_size, x:x + self.x_kernel_size]
+
+                if np.sum(window) > 0:
+                    self._make_single_observation(observation=window.flatten(), syns=current_cell.syns)
+                syn_i += 1
+
+    def _make_single_observation(self, observation, syns):
+        """
+        The key function which makes spikes for input_cells based ob observation numpy array
+
+        :param observation:
+        :param syns:
+        :return:
+        """
+        for pixel, syn in zip(observation, syns):
+            if pixel > 0:
+                stim_num, interval = self._get_poisson_stim(pixel)
+                next_event = 0
+                for e in range(stim_num):
+                    syn.make_event(next_event)
+                    next_event += interval
+
+    def _get_poisson_stim(self, pixel):
         stim_num = 0
         stim_int = 0
-        if single_input_value > 0:
-            stim_num = np.random.poisson(self.max_stim_per_stepsize, 1)[0]
+        if pixel > 0:
+            stim_num = np.random.poisson(pixel * self.max_stim_per_stepsize, 1)[0]
             if stim_num > 0:
-                stim_int = self.default_stepsize / stim_num
+                stim_int = self.stepsize / stim_num
         return stim_num, stim_int
 
     def _make_spike_detection(self):
@@ -231,53 +364,3 @@ class Agent:
     def _get_records(cells, variables="v", sec_name="soma", loc=0.5):
         rec_m = [cell.filter_secs(sec_name)(loc) for cell in cells]
         return Record(rec_m, variables=variables)
-
-    def _get_2d_basket_shape(self, observation):
-        div = np.sqrt(len(self.input_cells))
-        x_shape = observation.shape[1]
-        y_shape = observation.shape[0]
-
-        x_pixel_size = int(np.ceil(x_shape / div))
-        y_pixel_size = int(np.ceil(y_shape / div))
-        return x_pixel_size, y_pixel_size
-
-    def _get_1d_basket_size(self, observation):
-        return ceil(len(observation)/len(self.input_cells))
-
-    def _make_input_baskets(self):
-        baskets = []
-
-        if self.input_ndim == 1:
-            basket_sizes = self._get_1d_baskets(shape_size=self.input_size, cells_num=self.input_cell_num)
-            for i, x in enumerate(basket_sizes):
-                baskets.append(Basket(cell=self.input_cells[i], size=x))
-
-        elif self.input_ndim == 2:
-            basket_sizes_x = self._get_1d_baskets(shape_size=self.input_shape[0], cells_num=self.input_cell_num)
-            basket_sizes_y = self._get_1d_baskets(shape_size=self.input_shape[1], cells_num=self.input_cell_num)
-            for i, (x, y) in enumerate(zip(basket_sizes_x, basket_sizes_y)):
-                baskets.append(Basket(cell=self.input_cells[i], size=x*y))
-        else:
-            raise RuntimeError("Input dimention can be only 1 or 2, but provided: %s" % self.input_ndim)
-
-        print(sum([b.size for b in baskets]), np.prod(self.input_shape))
-        return baskets
-
-    def _get_1d_baskets(self, shape_size, num):
-        inputs_per_cell = shape_size / num
-        inputs_per_cell_int = int(floor(inputs_per_cell))
-        input_mod = inputs_per_cell % inputs_per_cell_int
-
-        new_cell = 0
-        result = []
-        for i in range(num):
-            size = inputs_per_cell_int
-
-            new_cell += input_mod
-            if new_cell >= 1:
-                size += 1
-                new_cell -= 1
-
-            result.append(size)
-
-        return result

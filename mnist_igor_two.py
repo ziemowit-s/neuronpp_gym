@@ -8,13 +8,15 @@ import tensorflow as tf
 from neuronpp.cells.cell import Cell
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 
+from agents.agent import ConvParam
 from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
 from agents.ebner_olfactory_agent import WEIGHT
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
 
 # print(sys.path)
 # sys.path.extend('/Users/igor/git/neuronpp/neuronpp')
-for e in sys.path: print(e)
+for e in sys.path:
+    print(e)
 # print(sys.path)
 found = False
 for e in sys.path:
@@ -27,11 +29,10 @@ if not found:
 
 
 class EbOlAg(EbnerOlfactoryAgent):
-    def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, stepsize=20):
         self.hidden_cells = []
         self.inhibitory_cells = []
-        super().__init__(input_cell_num=input_cell_num, input_size=input_size, output_size=output_size,
-                         input_max_hz=input_max_hz, default_stepsize=default_stepsize)
+        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, stepsize=stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         # INPUTS
@@ -44,7 +45,6 @@ class EbOlAg(EbnerOlfactoryAgent):
         # info connect each cell to given number of synapses with source equal to None (to be set to input image)
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=WEIGHT, rule='one')
         # info add mechanisms (?)
-        input_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         # HIDDEN
         # info create the hidden population
@@ -131,19 +131,7 @@ def make_imshow(x_train, x_pixel_size, y_pixel_size):
     return obj, ax
 
 
-def select_best_output(output: list, epsilon=1) -> list:
-    if len(output) < 2:
-        return output
-    best_val = output[0].value
-    while True:
-        if output[-1].value <= best_val - epsilon:
-            output.pop()
-        else:
-            break
-    return output
-
-
-AGENT_STEPSIZE = 40
+AGENT_STEPSIZE = 50
 MNIST_LABELS = 3
 SKIP_PIXELS = 2
 INPUT_CELL_NUM = 9
@@ -159,17 +147,17 @@ def main(display_interval):
     # todo does recognising static characters using a RL learning make sense?
     # agent = EbnerOlfactoryAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
     #                             output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
-    agent = EbOlAg(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
-                   output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
-    # todo set warmup so that it is at least equal to the display_interval
-    agent.init(init_v=-80, warmup=max(10000, int(display_interval * 2 * AGENT_STEPSIZE / DT)), dt=DT)
+    agent = EbOlAg(output_cell_num=MNIST_LABELS, input_max_hz=800, stepsize=AGENT_STEPSIZE)
+    agent.build(input_shape=x_train.shape[1:],
+                x_param=ConvParam(kernel_size=4, padding=1, stride=4),
+                y_param=ConvParam(kernel_size=4, padding=1, stride=4))
+    agent.init(init_v=-80, warmup=int(2 * display_interval * AGENT_STEPSIZE / DT), dt=DT)
 
     # warning what is the heatmap showing here???
     hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
     # hitmap_graph = SpikesHeatmapGraph(name="MNIST heatmap", cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
 
     # info get input size
-    x_pixel_size, y_pixel_size = agent.get_input_cell_observation_shape(x_train[0])
     input_syn_per_cell = int(np.ceil(input_size / INPUT_CELL_NUM))
     print('pixels per input cell:', input_syn_per_cell)
 
@@ -209,18 +197,11 @@ def main(display_interval):
             stepsize = None
 
         # info compute the agent activation
-        # warning agent.step called ... = agent.step(...)[0] selects _only_ the first element in sorted
-        # warning list
-        # todo should return a list of all Agents with largest and equal values
-        # info then we can decide what to do if more than one are selected
-        output = agent.step(observation=obs, stepsize=int(AGENT_STEPSIZE), output_type="rate",
-                            sort_func=lambda x: -x.value, out_epsilon=1)
+        output = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)
 
-        predicted = -1
         # info get the predicted value and compare with the correct one
-        # info we take as predicted only if only one class was predicted, i.e. one had the rate higher than the other
-        # todo agent.step zwraca value==0 dla 'rate' co jest bez sensu, bo powinien zwracac -1 jesli nie bylo spike-ow
-        if len(output) == 1 and output[0].value > 0:
+        predicted = -1
+        if len(output) == 1 and output[0].value > -1:
             predicted = output[0].index
             predict_arr[predicted] += 1
 
@@ -229,11 +210,10 @@ def main(display_interval):
         if predicted == y:
             reward = 1
             correct_arr[predicted] += 1
-            print("{:05d}: recognized {:d}\t".format(processed, y), correct_arr, "/", predict_arr,
+            print("{:05d}: recognized {:5d}\t".format(processed, y), correct_arr, "/", predict_arr,
                   "\t({:.3f}%)".format(np.sum(correct_arr) / (processed + 1)))
         else:
             reward = -1
-            reward = -0.5
         # info reward the agent accordingly to the output
         # todo look carefully inside
         agent.make_reward_step(reward=reward)
@@ -253,13 +233,16 @@ def main(display_interval):
             # info update heatmap
             # hitmap_graph.plot()
             plt.draw()
+            plt.pause(1e-9)
             # agent.rec_input.plot(animate=True, position=(4, 4))
             # info display output act for last display_interval examples
             # info left AGENT_STEPSIZE / DT for additional steps on the left of display
             agent.rec_output.plot(animate=True,
                                   steps=int(AGENT_STEPSIZE / DT + 2 * display_interval * AGENT_STEPSIZE / DT),
-                                  true_class=last_true, pred_class=last_predicted, stepsize=AGENT_STEPSIZE, dt=DT)
-            plt.pause(1e-8)
+                                  true_class=last_true, pred_class=last_predicted, stepsize=AGENT_STEPSIZE, dt=DT,
+                                  show_true_predicted=True, true_labels=[0, 1, 2])
+            print("{:05d}               \t".format(processed), correct_arr, "/", predict_arr,
+                  "\t({:.3f}%)".format(np.sum(correct_arr) / (processed + 1)))
 
         index += 1
         processed += 1
