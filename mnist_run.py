@@ -2,10 +2,11 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+
+from agents.agent import Kernel
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 from neuronpp.utils.spikes_heatmap_graph import SpikesHeatmapGraph
 
-from agents.agent import ConvParam
 from agents.ebner_agent import EbnerAgent
 from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
 
@@ -39,10 +40,10 @@ def make_mnist_imshow(x_train, agent):
     :return:
     """
     fig, ax = plt.subplots(1, 1)
-    template = agent.pad_observation(x_train[0])
+    template = agent.pad_2d_observation(x_train[0])
 
-    x_ticks = np.arange(0, template.shape[0], agent.x_stride)
-    y_ticks = np.arange(0, template.shape[1], agent.y_stride)
+    x_ticks = np.arange(0, template.shape[0], agent.x_kernel.stride)
+    y_ticks = np.arange(0, template.shape[1], agent.y_kernel.stride)
 
     ax.set_xticks(x_ticks)
     ax.set_xticks([i for i in range(template.shape[0])], minor=True)
@@ -64,10 +65,10 @@ x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 
 # Create Agent
-agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=100, stepsize=AGENT_STEPSIZE)
+agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=100, default_stepsize=AGENT_STEPSIZE)
 agent.build(input_shape=x_train.shape[1:],
-            x_param=ConvParam(kernel_size=4, padding=1, stride=4),
-            y_param=ConvParam(kernel_size=4, padding=1, stride=4))
+            x_kernel=Kernel(size=4, padding=1, stride=4),
+            y_kernel=Kernel(size=4, padding=1, stride=4))
 agent.init(init_v=-80, warmup=2000, dt=0.2)
 print("Input neurons:", agent.input_cell_num)
 
@@ -119,13 +120,13 @@ while True:
     hitmap_graph.plot()
 
     # Update visualizations
-    imshow_obj.set_data(agent.pad_observation(obs))
+    imshow_obj.set_data(agent.pad_2d_observation(obs))
     ax.set_title('Predicted: %s True: %s' % (predicted, y))
     plt.draw()
     plt.pause(1e-9)
 
     # Make reward step
-    agent.make_reward_step(reward=reward, stepsize=50)
+    agent.reward_step(reward=reward, stepsize=50)
     # Write time after agent step
     agent_compute_time = time.time()
 
@@ -133,5 +134,5 @@ while True:
     index += 1
 
     # make visuatization of mV on each cells by layers
-    #agent.rec_input.plot(animate=True, position=(4, 4))
-    #agent.rec_output.plot(animate=True)
+    # agent.rec_input.plot(animate=True, position=(4, 4))
+    # agent.rec_output.plot(animate=True)
