@@ -8,13 +8,15 @@ import tensorflow as tf
 from neuronpp.cells.cell import Cell
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 
+from agents.agent import ConvParam
 from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
 from agents.ebner_olfactory_agent import WEIGHT
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
 
 # print(sys.path)
 # sys.path.extend('/Users/igor/git/neuronpp/neuronpp')
-for e in sys.path: print(e)
+for e in sys.path:
+    print(e)
 # print(sys.path)
 found = False
 for e in sys.path:
@@ -27,11 +29,10 @@ if not found:
 
 
 class EbOlAg(EbnerOlfactoryAgent):
-    def __init__(self, input_cell_num, input_size, output_size, input_max_hz, default_stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, stepsize=20):
         self.hidden_cells = []
         self.inhibitory_cells = []
-        super().__init__(input_cell_num=input_cell_num, input_size=input_size, output_size=output_size,
-                         input_max_hz=input_max_hz, default_stepsize=default_stepsize)
+        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, stepsize=stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         # INPUTS
@@ -44,7 +45,6 @@ class EbOlAg(EbnerOlfactoryAgent):
         # info connect each cell to given number of synapses with source equal to None (to be set to input image)
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=WEIGHT, rule='one')
         # info add mechanisms (?)
-        input_pop.add_mechs(single_cell_mechs=self._add_mechs)
 
         # HIDDEN
         # info create the hidden population
@@ -147,16 +147,17 @@ def main(display_interval):
     # todo does recognising static characters using a RL learning make sense?
     # agent = EbnerOlfactoryAgent(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
     #                             output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
-    agent = EbOlAg(input_cell_num=INPUT_CELL_NUM, input_size=input_size,
-                   output_size=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
-    agent.init(init_v=-80, warmup=10000, dt=DT)
+    agent = EbOlAg(output_cell_num=MNIST_LABELS, input_max_hz=800, stepsize=AGENT_STEPSIZE)
+    agent.build(input_shape=x_train.shape[1:],
+                x_param=ConvParam(kernel_size=4, padding=1, stride=4),
+                y_param=ConvParam(kernel_size=4, padding=1, stride=4))
+    agent.init(init_v=-80, warmup=2000, dt=DT)
 
     # warning what is the heatmap showing here???
     hitmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
     # hitmap_graph = SpikesHeatmapGraph(name="MNIST heatmap", cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
 
     # info get input size
-    x_pixel_size, y_pixel_size = agent.get_input_cell_observation_shape(x_train[0])
     input_syn_per_cell = int(np.ceil(input_size / INPUT_CELL_NUM))
     print('pixels per input cell:', input_syn_per_cell)
 
