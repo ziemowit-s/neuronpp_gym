@@ -9,11 +9,11 @@ from agents.sigma3_olfactory_agent import Sigma3OlfactoryAgent
 from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.15
-ENV_STEPSIZE = 10  # in ms
-AGENT_STEPSIZE = 30  # in ms
+ENV_STEPSIZE = 30  # in ms
+AGENT_STEPSIZE = 10  # in ms
 
-RESET_AFTER = 24  # in seconds
-REWARD_IF_PASS = 20  # in seconds
+RESET_AFTER = 50  # in seconds
+REWARD_IF_PASS = 45  # in seconds
 
 
 def make_action(move):
@@ -29,11 +29,11 @@ if __name__ == '__main__':
     ENV_STEPSIZE = ENV_STEPSIZE / 1000
 
     env, input_shape = get_env('Pong-v0', ratio=SCREEN_RATIO)
-    agent = Sigma3OlfactoryAgent(output_cell_num=2, input_max_hz=20, default_stepsize=AGENT_STEPSIZE)
+    agent = Sigma3OlfactoryAgent(output_cell_num=2, input_max_hz=50, default_stepsize=AGENT_STEPSIZE)
     agent.build(input_shape=input_shape,
                 x_kernel=Kernel(size=6, padding=0, stride=6),
                 y_kernel=Kernel(size=6, padding=0, stride=6))
-    agent.init(init_v=-70, warmup=10, dt=0.3)
+    agent.init(init_v=-70, warmup=10, dt=0.4)
     print("Input neurons:", agent.input_cell_num)
 
     # Create heatmap graph for input cells
@@ -61,7 +61,6 @@ if __name__ == '__main__':
             if time_from_reset > REWARD_IF_PASS:
                 reward = 1
 
-
         # Make observation
         curr_relative_time = time.time() - last_agent_steptime
         if last_agent_steptime == 0 or curr_relative_time > ENV_STEPSIZE:
@@ -73,20 +72,20 @@ if __name__ == '__main__':
             if output_time_diff > agent.sim.dt and outputs[0].value > -1:
                 print(outputs)
                 move = outputs[0].index
+
+            # write time after agent step
             last_agent_steptime = time.time()
 
         # Make reward
         if reward != 0:
-            agent.reward_step(reward=reward, stepsize=50)
+            print('reward:', reward)
+            agent.reward_step(reward=reward, stepsize=30)
 
         # Update graphs
         network_graph.update_spikes(agent.sim.t)
         network_graph.update_weights('w')
         hitmap_graph.plot()
 
-        # write time after agent step
-        last_agent_steptime = time.time()
-
         # make visuatization of mV on each cells by layers
-        agent.rec_input.plot(animate=True, position=(4, 3))
+        #agent.rec_input.plot(animate=True, position=(4, 3))
         # agent.rec_output.plot(animate=True)

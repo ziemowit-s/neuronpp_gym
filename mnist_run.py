@@ -116,7 +116,7 @@ while True:
     if predicted == y:
         avg_acc_fifo.put(1)
         reward = 1
-        print("i:", index, "reward recognized", y)
+        print("i:", index, "value:", y)
     else:
         avg_acc_fifo.put(0)
         reward = -1
