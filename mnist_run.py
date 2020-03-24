@@ -60,6 +60,7 @@ def make_mnist_imshow(x_train, agent):
 AGENT_STEPSIZE = 60  # in ms - how long agent will look on a single mnist image
 MNIST_LABELS = 3  # how much mnist digits we want
 SKIP_PIXELS = 2  # how many pixels on mnist we want to skip (image will make smaller)
+MAX_AVG_SIZE = 50
 
 # Prepare mnist dataset
 x_train, y_train = mnist_prepare(num=MNIST_LABELS)
@@ -88,7 +89,7 @@ network_graph.plot()
 index = 0
 reward = None
 agent_compute_time = 0
-fifo = queue.Queue(50)
+avg_acc_fifo = queue.Queue(maxsize=MAX_AVG_SIZE)
 
 while True:
     # Get current mnist data
@@ -110,12 +111,14 @@ while True:
         predicted = output.index
 
     # Make reward
+    if avg_acc_fifo.qsize() == MAX_AVG_SIZE:
+        avg_acc_fifo.get()
     if predicted == y:
-        fifo.put(1)
+        avg_acc_fifo.put(1)
         reward = 1
         print("i:", index, "reward recognized", y)
     else:
-        fifo.put(0)
+        avg_acc_fifo.put(0)
         reward = -1
 
     # Update graphs
@@ -125,7 +128,7 @@ while True:
 
     # Update visualizations
     imshow_obj.set_data(agent.pad_2d_observation(obs))
-    avg_accuracy = round(np.average(list(fifo.queue)), 2)
+    avg_accuracy = round(np.average(list(avg_acc_fifo.queue)), 2)
     ax.set_title('Predicted: %s True: %s, AVG_ACC: %s' % (predicted, y, avg_accuracy))
     plt.draw()
     plt.pause(1e-9)
