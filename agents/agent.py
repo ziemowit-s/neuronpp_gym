@@ -33,11 +33,13 @@ class Agent:
 
         self.sim = None
         self.warmup = None
+
         self.input_size = None
         self.input_shape = None
         self.input_cells = None
-        self.output_cells = None
         self.input_cell_num = None
+
+        self.output_cells = None
 
         self.x_kernel = None
         self.y_kernel = None
@@ -81,8 +83,10 @@ class Agent:
         self.x_kernel = x_kernel
         self.y_kernel = y_kernel
 
-        self.input_shape = input_shape
-        self.input_size = np.prod(input_shape)
+        padded_obs = self.pad_2d_observation(np.zeros(input_shape))
+
+        self.input_shape = padded_obs.shape
+        self.input_size = padded_obs.size
         self.input_cell_num = self.x_kernel_num * self.y_kernel_num
 
         self._build()
@@ -167,8 +171,6 @@ class Agent:
                               "however input_cells were not defined.")
 
         # Make observation
-        if self.input_size != observation.size:
-            raise RuntimeError("Observation must be of same size as self.input_size, which is a product of input_shape.")
         if observation.ndim == 1:
             self._make_1d_observation(observation)
         elif observation.ndim == 2:
@@ -221,7 +223,7 @@ class Agent:
         return result
 
     def pad_2d_observation(self, obs):
-        if not self._agent_builded:
+        if self.x_kernel is None or self.y_kernel is None:
             raise RuntimeError("Before calling pad_observation() you need to build the Agent by calling build() function first.")
         return np.pad(obs, (self.x_kernel.padding, self.y_kernel.padding), 'constant', constant_values=(0, 0))
 
@@ -288,6 +290,8 @@ class Agent:
             list of names of stimulated cells in the stimulation order
         """
         obs = self.pad_2d_observation(obs)
+        if self.input_size != obs.size:
+            raise RuntimeError("Observation must be of same size as self.input_size, which is a product of input_shape.")
 
         cell_i = 0
         for y in range(0, self.input_shape[0], self.y_kernel.stride):
@@ -308,6 +312,9 @@ class Agent:
         1 dim array of numbers
         :return:
         """
+        if self.input_size != obs.size:
+            raise RuntimeError("Observation must be of same size as self.input_size, which is a product of input_shape.")
+
         input_syns = [s for c in self.input_cells for s in c.syns]
         self._make_single_observation(observation=obs, syns=input_syns)
 

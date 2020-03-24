@@ -1,7 +1,8 @@
+import queue
 import time
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 from agents.agent import Kernel
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
@@ -87,6 +88,7 @@ network_graph.plot()
 index = 0
 reward = None
 agent_compute_time = 0
+fifo = queue.Queue(50)
 
 while True:
     # Get current mnist data
@@ -109,9 +111,11 @@ while True:
 
     # Make reward
     if predicted == y:
+        fifo.put(1)
         reward = 1
         print("i:", index, "reward recognized", y)
     else:
+        fifo.put(0)
         reward = -1
 
     # Update graphs
@@ -121,7 +125,8 @@ while True:
 
     # Update visualizations
     imshow_obj.set_data(agent.pad_2d_observation(obs))
-    ax.set_title('Predicted: %s True: %s' % (predicted, y))
+    avg_accuracy = round(np.average(list(fifo.queue)), 2)
+    ax.set_title('Predicted: %s True: %s, AVG_ACC: %s' % (predicted, y, avg_accuracy))
     plt.draw()
     plt.pause(1e-9)
 

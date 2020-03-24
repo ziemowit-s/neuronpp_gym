@@ -15,6 +15,7 @@ AGENT_STEPSIZE = 30  # in ms
 RESET_AFTER = 24  # in seconds
 REWARD_IF_PASS = 20  # in seconds
 
+
 def make_action(move):
     if move == 0:  # UP
         return 2
