@@ -1,6 +1,6 @@
 import numpy as np
-
 from neuronpp.utils.record import Record
+
 from agents.agent import Agent
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from populations.ebner_modulatory_population import EbnerModulatoryPopulation
@@ -30,6 +30,8 @@ class EbnerAgent(Agent):
         pop = EbnerModulatoryPopulation(name)
         pop.create(cell_num)
 
+        # info draw netcon_weights from N(WEIGHT, epsilon)
+        # todo what should be the epsilon value? WEIGHT is small (=0.0035)
         syns = pop.connect(source=source, syn_num_per_source=syn_per_cell,
                            delay=1, netcon_weight=0.005, ach_weight=1, da_weight=1, rule='all',
                            ACh_tau=50, Da_tau=50)
