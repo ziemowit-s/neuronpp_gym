@@ -24,11 +24,11 @@ class Agent:
 
         self.output_cell_num = output_cell_num
 
-        self.max_hz = input_max_hz
+        self.input_max_hz = input_max_hz
         self.default_stepsize = default_stepsize
         self.max_input_stim_per_stepsize = (default_stepsize * input_max_hz) / 1000
-        if self.max_input_stim_per_stepsize <= 0:
-            raise ValueError("Agent's self.max_input_stim_per_stepsize must be > 0, choose input_max_hz and stepsize params carefully.")
+        if self.max_input_stim_per_stepsize < 1:
+            raise ValueError("Agent's self.max_input_stim_per_stepsize must be > 1, choose input_max_hz and stepsize params carefully.")
         print("max_input_stim_per_stepsize:", self.max_input_stim_per_stepsize)
 
         self.sim = None
@@ -144,7 +144,7 @@ class Agent:
     def _make_records(self):
         raise NotImplementedError()
 
-    def step(self, observation, output_type="time", sort_func=None, stepsize=None):
+    def step(self, observation, output_type="time", sort_func=None, poisson=False, stepsize=None):
         """
         :param observation:
             numpy array. 1 or 2 dim are allowed
@@ -154,6 +154,8 @@ class Agent:
             "raw": returns raw array for each motor cell of all spikes in time in ms.
         :param sort_func:
             Optional function which define sorting on list of AgentOutput objects.
+        :param poisson:
+            if use Poisson distribution for each pixel stimulation. Default is False.
         :param stepsize:
             in ms. If None - it will use self.default_stepsize.
         :return:
@@ -172,9 +174,9 @@ class Agent:
 
         # Make observation
         if observation.ndim == 1:
-            self._make_1d_observation(observation)
+            self._make_1d_observation(observation, poisson, stepsize)
         elif observation.ndim == 2:
-            self._make_2d_observation(observation)
+            self._make_2d_observation(observation, poisson, stepsize)
         else:
             raise ValueError("Observation must be a numpy array of dim 2")
 
@@ -281,7 +283,7 @@ class Agent:
 
         return outputs
 
-    def _make_2d_observation(self, obs):
+    def _make_2d_observation(self, obs, poisson=False, stepsize=None):
         """
         Make 2D input observation
 
@@ -301,10 +303,10 @@ class Agent:
                 window = obs[y:y + self.y_kernel.size, x:x + self.x_kernel.size]
 
                 if np.sum(window) > 0:
-                    self._make_single_observation(observation=window.flatten(), syns=current_cell.syns)
+                    self._make_single_observation(observation=window.flatten(), syns=current_cell.syns, poisson=poisson, stepsize=stepsize)
                 cell_i += 1
 
-    def _make_1d_observation(self, obs):
+    def _make_1d_observation(self, obs, poisson=False, stepsize=None):
         """
         Make 1D input observation
 
@@ -316,9 +318,9 @@ class Agent:
             raise RuntimeError("Observation must be of same size as self.input_size, which is a product of input_shape.")
 
         input_syns = [s for c in self.input_cells for s in c.syns]
-        self._make_single_observation(observation=obs, syns=input_syns)
+        self._make_single_observation(observation=obs, syns=input_syns, poisson=poisson, stepsize=stepsize)
 
-    def _make_single_observation(self, observation, syns):
+    def _make_single_observation(self, observation, syns, poisson, stepsize=None):
         """
         The core observation method which match observation flat array (1D) to the list of synapses.
         observation and syns need to be of the same length.
@@ -334,19 +336,42 @@ class Agent:
 
         for pixel, syn in zip(observation, syns):
             if pixel > 0:
-                stim_num, interval = self._get_poisson_stim(pixel)
+                stim_num, interval = self._get_stim_values(pixel, poisson, stepsize)
                 next_event = 0
                 for e in range(stim_num):
                     syn.make_event(next_event)
                     next_event += interval
 
-    def _get_poisson_stim(self, pixel):
+    def _get_stim_values(self, pixel, poisson=False, stepsize=None):
+        """
+        Returns number of events and their interval for a single synaptic stimulation
+
+        :param pixel:
+            single pixel value
+        :param poisson:
+            If use poisson distribution, Default is False.
+        :param stepsize:
+            stepsize for this observation. if default None - it will take self.default_stepsize
+        :return:
+            tuple(number of events, interval between events)
+        """
         stim_num = 0
         stim_int = 0
-        if pixel > 0:
-            stim_num = np.random.poisson(pixel * self.max_input_stim_per_stepsize, 1)[0]
-            if stim_num > 0:
-                stim_int = self.default_stepsize / stim_num
+
+        if pixel <= 0:
+            return stim_num, stim_int
+
+        if stepsize is None:
+            stepsize = self.default_stepsize
+            max_stim = self.max_input_stim_per_stepsize
+        else:
+            max_stim = (stepsize * self.input_max_hz) / 1000
+
+        stim_num = int(round(pixel * max_stim))
+        if poisson:
+            stim_num = np.random.poisson(stim_num, 1)[0]
+        if stim_num > 0:
+            stim_int = stepsize / stim_num
         return stim_num, stim_int
 
     def _make_spike_detection(self):
@@ -369,6 +394,6 @@ class Agent:
         motor_pop.connect(source=output_cells, netcon_weight=netcon_weight, rule='one')
 
     @staticmethod
-    def _get_records(cells, variables="v", sec_name="soma", loc=0.5):
+    def get_records(cells, variables="v", sec_name="soma", loc=0.5):
         rec_m = [cell.filter_secs(sec_name)(loc) for cell in cells]
         return Record(rec_m, variables=variables)

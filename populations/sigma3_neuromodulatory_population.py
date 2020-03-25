@@ -7,7 +7,7 @@ from neuronpp.core.populations.population import Population
 from neuronpp.utils.utils import set_random_normal_weights
 
 
-class Sigma3ModulatoryPopulation(Population):
+class Sigma3NeuromodulatoryPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
         name = "Sigma3Modulatory_%s" % self.cell_counter
