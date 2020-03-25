@@ -56,8 +56,8 @@ def make_mnist_imshow(x_train, agent):
     return obj, ax
 
 
-AGENT_STEPSIZE = 60  # in ms - how long agent will look on a single mnist image
-MNIST_LABELS = 2  # how much mnist digits we want
+AGENT_STEPSIZE = 80  # in ms - how long agent will look on a single mnist image
+MNIST_LABELS = 3  # how much mnist digits we want
 SKIP_PIXELS = 2  # how many pixels on mnist we want to skip (image will make smaller)
 
 EPSILON_OUTPUT = 1  # Min epsilon difference between 2 the best output and the next one to decide if agent answered (otherwise answer: -1)
@@ -70,8 +70,8 @@ x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 # Create Agent
 agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=100, default_stepsize=AGENT_STEPSIZE)
 agent.build(input_shape=x_train.shape[1:],
-            x_kernel=Kernel(size=8, padding=1, stride=8),
-            y_kernel=Kernel(size=8, padding=1, stride=8))
+            x_kernel=Kernel(size=4, padding=1, stride=4),
+            y_kernel=Kernel(size=4, padding=1, stride=4))
 agent.init(init_v=-80, warmup=2000, dt=0.2)
 print("Input neurons:", agent.input_cell_num)
 
@@ -107,6 +107,8 @@ while True:
     # Make step and get agent predictions
     predicted = -1
     outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value, poisson=True)
+    print('output:', " / ".join(["%s:%s" % (o.index, o.value) for o in outputs]))
+
     if (outputs[0].value - outputs[1].value) >= EPSILON_OUTPUT:
         predicted = outputs[0].index
         print("answer:", predicted)
@@ -117,7 +119,7 @@ while True:
     if predicted == y:
         avg_acc_fifo.put(1)
         reward = 1
-        print("i:", index, "value:", y)
+        print("CORRECT!")
     else:
         avg_acc_fifo.put(0)
         reward = -1

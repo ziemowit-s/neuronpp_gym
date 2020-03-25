@@ -9,7 +9,7 @@ from populations.ebner_modulatory_population import EbnerModulatoryPopulation
 #WEIGHT = 0.0035  # From Ebner et al. 2019
 
 class EbnerAgent(Agent):
-    def __init__(self, output_cell_num, input_max_hz, netcon_weight=0.001, default_stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, netcon_weight=0.01, default_stepsize=20):
         """
         :param output_cell_num:
         :param input_max_hz:
@@ -25,14 +25,17 @@ class EbnerAgent(Agent):
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=self.netcon_weight, rule='one')
 
         output_pop = self._make_modulatory_population("out_1", cell_num=output_cell_num, source=input_pop)
+        #output_pop = EbnerHebbianPopulation("out_1")
+        #output_pop.create(cell_num=output_cell_num)
+        #output_pop.connect(source=input_pop, delay=1, netcon_weight=self.netcon_weight, rule='all')
 
         return input_pop.cells, output_pop.cells
 
-    def _make_modulatory_population(self, name, cell_num, source=None, syn_per_cell=1):
+    def _make_modulatory_population(self, name, cell_num, source=None):
         pop = EbnerModulatoryPopulation(name)
         pop.create(cell_num)
 
-        syns = pop.connect(source=source, syn_num_per_source=syn_per_cell,
+        syns = pop.connect(source=source,
                            delay=1, netcon_weight=self.netcon_weight, ach_weight=1, da_weight=1, rule='all',
                            ACh_tau=50, Da_tau=50)
 

@@ -57,7 +57,7 @@ while True:
     outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value, poisson=True)
 
     print('output:', " / ".join(["%s:%s" % (o.index, o.value) for o in outputs]))
-    #
+
     syns0 = [round(s.hoc.w, 2) for s in agent.output_cells[0].syns if "synach" not in s.name.lower() and "synda" not in s.name.lower()]
     syns1 = [round(s.hoc.w, 2) for s in agent.output_cells[1].syns if "synach" not in s.name.lower() and "synda" not in s.name.lower()]
 
