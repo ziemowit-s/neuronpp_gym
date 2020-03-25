@@ -100,36 +100,6 @@ class EbOlAg(EbnerOlfactoryAgent):
                                mod_name="Exp2Syn", e=-90)
 
 
-def mnist_prepare(num=10):
-    mnist = tf.keras.datasets.mnist
-
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    x_train, x_test = x_train / 255.0, x_test / 255.0
-
-    index_list = []
-    for i, labels in enumerate(y_train):
-        if labels in list(np.arange(num)):
-            index_list.append(i)
-
-    x_train, y_train = x_train[index_list], y_train[index_list]
-    return x_train, y_train
-
-
-def make_imshow(x_train, x_pixel_size, y_pixel_size):
-    fig, ax = plt.subplots(1, 1)
-
-    x_ticks = np.arange(0, x_train.shape[1], x_pixel_size)
-    y_ticks = np.arange(0, x_train.shape[2], y_pixel_size)
-    ax.set_xticks(x_ticks)
-    ax.set_xticks([i for i in range(x_train.shape[1])], minor=True)
-    ax.set_yticks(y_ticks)
-    ax.set_yticks([i for i in range(x_train.shape[2])], minor=True)
-
-    obj = ax.imshow(x_train[0], cmap=plt.get_cmap('gray'), extent=[0, x_train.shape[1], 0, x_train.shape[2]])
-    ax.grid(which='minor', alpha=0.2)
-    ax.grid(which='major', alpha=1)
-    return obj, ax
-
 
 AGENT_STEPSIZE = 50
 MNIST_LABELS = 3
@@ -232,8 +202,6 @@ def main(display_interval):
             # graph.update_weights('w')
             # info update heatmap
             # hitmap_graph.plot()
-            plt.draw()
-            plt.pause(1e-9)
             # agent.rec_input.plot(animate=True, position=(4, 4))
             # info display output act for last display_interval examples
             # info left AGENT_STEPSIZE / DT for additional steps on the left of display
@@ -241,6 +209,8 @@ def main(display_interval):
                                   steps=int(AGENT_STEPSIZE / DT + 2 * display_interval * AGENT_STEPSIZE / DT),
                                   true_class=last_true, pred_class=last_predicted, stepsize=AGENT_STEPSIZE, dt=DT,
                                   show_true_predicted=True, true_labels=[0, 1, 2])
+            plt.draw()
+            plt.pause(1)
             print("{:05d}               \t".format(processed), correct_arr, "/", predict_arr,
                   "\t({:.3f}%)".format(np.sum(correct_arr) / (processed + 1)))
 
@@ -248,6 +218,37 @@ def main(display_interval):
         processed += 1
         if index == y_train.shape[0]:
             index = 0
+
+
+def mnist_prepare(num=10):
+    mnist = tf.keras.datasets.mnist
+
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    x_train, x_test = x_train / 255.0, x_test / 255.0
+
+    index_list = []
+    for i, labels in enumerate(y_train):
+        if labels in list(np.arange(num)):
+            index_list.append(i)
+
+    x_train, y_train = x_train[index_list], y_train[index_list]
+    return x_train, y_train
+
+
+def make_imshow(x_train, x_pixel_size, y_pixel_size):
+    fig, ax = plt.subplots(1, 1)
+
+    x_ticks = np.arange(0, x_train.shape[1], x_pixel_size)
+    y_ticks = np.arange(0, x_train.shape[2], y_pixel_size)
+    ax.set_xticks(x_ticks)
+    ax.set_xticks([i for i in range(x_train.shape[1])], minor=True)
+    ax.set_yticks(y_ticks)
+    ax.set_yticks([i for i in range(x_train.shape[2])], minor=True)
+
+    obj = ax.imshow(x_train[0], cmap=plt.get_cmap('gray'), extent=[0, x_train.shape[1], 0, x_train.shape[2]])
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=1)
+    return obj, ax
 
 
 if __name__ == '__main__':
