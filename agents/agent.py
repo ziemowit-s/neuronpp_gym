@@ -66,11 +66,18 @@ class Agent:
         else:
             self._build_2d(input_shape, x_kernel, y_kernel)
 
-    def _build_1d(self, input_shape: int):
+    def _build_1d(self, input_shape):
+        if isinstance(input_shape, tuple) and len(input_shape) != 1:
+            raise ValueError("1 dim input shape must be int.")
         if not isinstance(input_shape, int):
             raise ValueError("1 dim input shape must be int.")
 
-        self.input_shape = input_shape
+        if isinstance(input_shape, tuple):
+            input_shape = input_shape[0]
+
+        self.input_shape = (input_shape,)
+        self.input_size = input_shape
+        self.input_cell_num = input_shape
         self._build()
 
     def _build_2d(self, input_shape: tuple, x_kernel: Kernel, y_kernel: Kernel):

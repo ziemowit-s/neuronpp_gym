@@ -57,7 +57,7 @@ def make_mnist_imshow(x_train, agent):
 
 
 AGENT_STEPSIZE = 60  # in ms - how long agent will look on a single mnist image
-MNIST_LABELS = 3  # how much mnist digits we want
+MNIST_LABELS = 2  # how much mnist digits we want
 SKIP_PIXELS = 2  # how many pixels on mnist we want to skip (image will make smaller)
 
 EPSILON_OUTPUT = 1  # Min epsilon difference between 2 the best output and the next one to decide if agent answered (otherwise answer: -1)
@@ -70,8 +70,8 @@ x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 # Create Agent
 agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=100, default_stepsize=AGENT_STEPSIZE)
 agent.build(input_shape=x_train.shape[1:],
-            x_kernel=Kernel(size=4, padding=1, stride=4),
-            y_kernel=Kernel(size=4, padding=1, stride=4))
+            x_kernel=Kernel(size=8, padding=1, stride=8),
+            y_kernel=Kernel(size=8, padding=1, stride=8))
 agent.init(init_v=-80, warmup=2000, dt=0.2)
 print("Input neurons:", agent.input_cell_num)
 
