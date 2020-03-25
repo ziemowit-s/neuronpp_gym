@@ -2,6 +2,7 @@ import numpy as np
 
 from neuronpp.utils.record import Record
 from agents.agent import Agent
+from populations.Exp2SynPopulation import Exp2SynPopulation
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from populations.ebner_modulatory_population import EbnerModulatoryPopulation
 
@@ -18,9 +19,9 @@ class EbnerAgent(Agent):
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
-        input_pop = EbnerHebbianPopulation("inp_0")
+        input_pop = Exp2SynPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
-        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=0.01, rule='one')
+        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=0.001, rule='one')
 
         output_pop = self._make_modulatory_population("out_1", cell_num=output_cell_num, source=input_pop)
 
@@ -31,7 +32,7 @@ class EbnerAgent(Agent):
         pop.create(cell_num)
 
         syns = pop.connect(source=source, syn_num_per_source=syn_per_cell,
-                           delay=1, netcon_weight=0.005, ach_weight=1, da_weight=1, rule='all',
+                           delay=1, netcon_weight=0.001, ach_weight=1, da_weight=1, rule='all',
                            ACh_tau=50, Da_tau=50)
 
         # Prepare synapses for reward and punish

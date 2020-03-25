@@ -106,7 +106,7 @@ while True:
 
     # Make step and get agent predictions
     predicted = -1
-    outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)
+    outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value, poisson=True)
     if (outputs[0].value - outputs[1].value) >= EPSILON_OUTPUT:
         predicted = outputs[0].index
         print("answer:", predicted)
@@ -136,6 +136,7 @@ while True:
 
     # Make reward step
     agent.reward_step(reward=reward, stepsize=50)
+
     # Write time after agent step
     agent_compute_time = time.time()
 
@@ -143,5 +144,5 @@ while True:
     index += 1
 
     # make visuatization of mV on each cells by layers
-    # agent.rec_input.plot(animate=True, position=(4, 4))
-    # agent.rec_output.plot(animate=True)
+    #agent.rec_input.plot(animate=True, position=(4, 4))
+    #agent.rec_output.plot(animate=True)
