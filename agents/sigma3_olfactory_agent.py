@@ -9,15 +9,15 @@ from populations.sigma3_modulatory_population import Sigma3ModulatoryPopulation
 
 
 class Sigma3OlfactoryAgent(Agent):
-    def __init__(self, output_cell_num, input_max_hz, stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, default_stepsize=20):
         """
         :param output_cell_num:
         :param input_max_hz:
-        :param stepsize:
+        :param default_stepsize:
         """
         self.hidden_cells = []
         self.inhibitory_cells = []
-        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, stepsize=stepsize)
+        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
