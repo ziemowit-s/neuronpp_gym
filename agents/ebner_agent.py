@@ -9,7 +9,7 @@ from populations.ebner_modulatory_population import EbnerModulatoryPopulation
 #WEIGHT = 0.0035  # From Ebner et al. 2019
 
 class EbnerAgent(Agent):
-    def __init__(self, output_cell_num, input_max_hz, netcon_weight=0.01, default_stepsize=20):
+    def __init__(self, output_cell_num, input_max_hz, netcon_weight=0.01, default_stepsize=20, ach_tau=50, da_tau=50):
         """
         :param output_cell_num:
         :param input_max_hz:
@@ -17,6 +17,8 @@ class EbnerAgent(Agent):
         """
         super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, default_stepsize=default_stepsize)
         self.netcon_weight = netcon_weight
+        self.ach_tau = ach_tau
+        self.da_tau = da_tau
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
@@ -37,7 +39,7 @@ class EbnerAgent(Agent):
 
         syns = pop.connect(source=source,
                            delay=1, netcon_weight=self.netcon_weight, ach_weight=1, da_weight=1, rule='all',
-                           ACh_tau=50, Da_tau=50)
+                           ACh_tau=self.ach_tau, Da_tau=self.da_tau)
 
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:

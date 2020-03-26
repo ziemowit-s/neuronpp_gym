@@ -20,13 +20,15 @@ class Sigma3NeuromodulatoryPopulation(Population):
         return cell
 
     def syn_definition(self, cell: Cell, source, syn_num_per_source=1, delay=1,
-                       netcon_weight=1, neuromodulatory_weight=1,
+                       netcon_weight=1, ach_weight=1, da_weight=1, ach_tau=10, da_tau=10,
                        random_weight_mean=None, **kwargs):
         secs = cell.filter_secs("apic")
         syns, heads = cell.add_synapses_with_spine(source=source, mod_name="ExcSigma3Exp2SynAchDa",
                                                    secs=secs,
                                                    number=syn_num_per_source,
                                                    netcon_weight=netcon_weight,
+                                                   ach_tau=ach_tau,
+                                                   da_tau=da_tau,
                                                    delay=delay, **kwargs)
         if random_weight_mean:
             set_random_normal_weights(point_processes=[s.point_process for s in syns], mean=random_weight_mean,
@@ -37,9 +39,9 @@ class Sigma3NeuromodulatoryPopulation(Population):
         for syn in syns:
             pp = syn.point_process
             ach_netcon = cell.add_netcon(source=None, point_process=pp,
-                                         netcon_weight=neuromodulatory_weight + pp.hoc.ach_substractor, delay=1)
+                                         netcon_weight=ach_weight + pp.hoc.ach_substractor, delay=1)
             da_netcon = cell.add_netcon(source=None, point_process=syn.point_process,
-                                        netcon_weight=neuromodulatory_weight + pp.hoc.da_substractor, delay=1)
+                                        netcon_weight=da_weight + pp.hoc.da_substractor, delay=1)
             ncs_ach.append(ach_netcon)
             ncs_da.append(da_netcon)
 
