@@ -62,11 +62,10 @@ class EbOlA(EbnerOlfactoryAgent):
 
 def main(display_interval):
     x_train, y_train = mnist_prepare(num=MNIST_LABELS)
-    # todo prepare better downsampling function
+    # warning  use cv2 downsampling function: in agent build pass shapes _after_ downsampling
     # x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 
     # info build the agent architecture
-    # todo does recognising static characters using a RL learning actually make sense?
     agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
     # agent = EbnerOlfactoryAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
     # agent = EbOlA(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
@@ -80,9 +79,7 @@ def main(display_interval):
     print("Agent {:s}\n\tinput cell number: {:d}\n\tpixels per input cell: ???".format(agent.__class__.__name__,
                                                                                        agent.input_cell_num))  # , agent.input_syn_per_cell)
 
-    # info display an image to recognize; update
     # obj, ax = make_imshow(x_train, x_pixel_size=x_pixel_size, y_pixel_size=y_pixel_size)
-    # info image cells heatmap
     heatmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
     # heatmap_graph = SpikesHeatmapGraph(name="MNIST heatmap", cells=agent.input_cells, shape=(heatmap_shape, heatmap_shape))
 
@@ -103,11 +100,9 @@ def main(display_interval):
     correct_arr = np.zeros(MNIST_LABELS, dtype=int)
     predict_arr = np.zeros(MNIST_LABELS, dtype=int)
     processed = 0
-    # info lists of last truue and predicted;
     last_true = []
     last_predicted = []
     while True:
-        # info read the current input
         y = y_train[index]
         # downsample input
         # obs = x_train[index]
@@ -121,9 +116,7 @@ def main(display_interval):
         else:
             stepsize = None
 
-        # info compute the agent activation
         output = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)
-        # info get the predicted value and compare with the correct one
         predicted = -1
         if len(output) == 1 and output[0].value > -1:
             predicted = output[0].index
@@ -138,9 +131,6 @@ def main(display_interval):
                   "\t({:.3f}%)".format(np.sum(correct_arr) / (processed + 1)))
         else:
             reward = -1
-        # info reward the agent accordingly to the output
-        # todo look carefully inside
-        # todo stepsize=AGENT_STEPSIZE or =stepsize?
         agent.reward_step(reward=reward, stepsize=AGENT_STEPSIZE)
 
         # write time after agent step
@@ -149,13 +139,10 @@ def main(display_interval):
         last_predicted = last_predicted[-display_interval:]
         last_true = last_true[-display_interval:]
         if processed > 0 and processed % display_interval == 0:
-            # info update input image image
             # obj.set_data(obs)
             # ax.set_title('Predicted: %s True: %s' % (predicted, y))
-            # info update weights in graph
             # graph.update_spikes(agent.sim.t)
             # graph.update_weights('w')
-            # info update heatmap
             # hitmap_graph.plot()
             # agent.rec_input.plot(animate=True, position=(4, 4))
             # info display output act for last display_interval examples
