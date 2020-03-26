@@ -4,7 +4,7 @@ from neuronpp.cells.cell import Cell
 
 from agents.agent import Agent
 from populations.sigma3_hebbian_population import Sigma3HebbianPopulation
-from populations.sigma3_modulatory_population import Sigma3ModulatoryPopulation
+from populations.sigma3_neuromodulatory_population import Sigma3NeuromodulatoryPopulation
 
 
 class InhibAgent(Agent):
@@ -102,7 +102,7 @@ class InhibAgent(Agent):
                                seg=target.filter_secs('soma')(0.5), mod_name="Exp2Syn")
 
     def _make_modulatory_population(self, name, cell_num, source=None):
-        pop = Sigma3ModulatoryPopulation(name)
+        pop = Sigma3NeuromodulatoryPopulation(name)
         pop.create(cell_num)
         syns = pop.connect(source=source, syn_num_per_source=1,
                            delay=1, neuromodulatory_weight=0.1,
@@ -115,8 +115,8 @@ class InhibAgent(Agent):
         return pop
 
     def _make_records(self):
-        self.rec_input = self._get_records(cells=self.input_cells)
-        self.rec_hidden = self._get_records(cells=self.hidden_cells)
-        self.rec_pattern = self._get_records(cells=self.pattern_cells)
-        self.rec_out = self._get_records(cells=self.output_cells)
-        self.rec_motor = self._get_records(cells=self.motor_cells)
+        self.rec_input = self.get_records(cells=self.input_cells)
+        self.rec_hidden = self.get_records(cells=self.hidden_cells)
+        self.rec_pattern = self.get_records(cells=self.pattern_cells)
+        self.rec_out = self.get_records(cells=self.output_cells)
+        self.rec_motor = self.get_records(cells=self.motor_cells)

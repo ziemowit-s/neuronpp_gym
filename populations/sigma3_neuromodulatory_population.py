@@ -7,7 +7,7 @@ from neuronpp.core.populations.population import Population
 from neuronpp.utils.utils import set_random_normal_weights
 
 
-class Sigma3ModulatoryPopulation(Population):
+class Sigma3NeuromodulatoryPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
         name = "Sigma3Modulatory_%s" % self.cell_counter
@@ -30,7 +30,7 @@ class Sigma3ModulatoryPopulation(Population):
                                                    delay=delay, **kwargs)
         if random_weight_mean:
             set_random_normal_weights(point_processes=[s.point_process for s in syns], mean=random_weight_mean,
-                                      std=random_weight_mean)
+                                      std=random_weight_mean / 4)
 
         ncs_ach = []
         ncs_da = []

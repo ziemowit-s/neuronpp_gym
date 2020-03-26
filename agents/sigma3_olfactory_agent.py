@@ -5,7 +5,7 @@ from neuronpp.utils.record import Record
 
 from agents.agent import Agent
 from populations.sigma3_hebbian_population import Sigma3HebbianPopulation
-from populations.sigma3_modulatory_population import Sigma3ModulatoryPopulation
+from populations.sigma3_neuromodulatory_population import Sigma3NeuromodulatoryPopulation
 
 
 class Sigma3OlfactoryAgent(Agent):
@@ -42,7 +42,7 @@ class Sigma3OlfactoryAgent(Agent):
         return input_pop.cells, output_pop.cells
 
     def _make_modulatory_population(self, name, cell_num, source=None):
-        pop = Sigma3ModulatoryPopulation(name)
+        pop = Sigma3NeuromodulatoryPopulation(name)
         pop.create(cell_num)
         syns = pop.connect(source=source, syn_num_per_source=1,
                            delay=1, neuromodulatory_weight=1,

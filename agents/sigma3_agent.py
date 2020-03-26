@@ -1,47 +1,42 @@
 import numpy as np
 
-from neuronpp.utils.record import Record
-
 from agents.agent import Agent
 from populations.Exp2SynPopulation import Exp2SynPopulation
-from populations.ebner_hebbian_population import EbnerHebbianPopulation
-from populations.ebner_modulatory_population import EbnerModulatoryPopulation
+from populations.sigma3_neuromodulatory_population import Sigma3NeuromodulatoryPopulation
 
 
-# WEIGHT = 0.0035  # From Ebner et al. 2019
-
-class EbnerAgent(Agent):
+class Sigma3Agent(Agent):
     def __init__(self, output_cell_num, input_max_hz, netcon_weight=0.01, default_stepsize=20):
         """
         :param output_cell_num:
         :param input_max_hz:
         :param default_stepsize:
         """
-        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, default_stepsize=default_stepsize)
+        self.hidden_cells = []
+        self.inhibitory_cells = []
+        self.pattern_cells = []
         self.netcon_weight = netcon_weight
+        super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
+        # INPUTS
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
         input_pop = Exp2SynPopulation("inp_0")
-        input_pop.create(cell_num=input_cell_num)
+        input_pop.create(input_cell_num)
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=self.netcon_weight,
                           rule='one')
 
+        # OUTPUTS
         output_pop = self._make_modulatory_population("out_1", cell_num=output_cell_num, source=input_pop)
-        # output_pop = EbnerHebbianPopulation("out_1")
-        # output_pop.create(cell_num=output_cell_num)
-        # output_pop.connect(source=input_pop, delay=1, netcon_weight=self.netcon_weight, rule='all')
 
         return input_pop.cells, output_pop.cells
 
     def _make_modulatory_population(self, name, cell_num, source=None):
-        pop = EbnerModulatoryPopulation(name)
+        pop = Sigma3NeuromodulatoryPopulation(name)
         pop.create(cell_num)
-
-        syns = pop.connect(source=source,
-                           delay=1, netcon_weight=self.netcon_weight, ach_weight=1, da_weight=1, rule='all',
-                           ACh_tau=50, Da_tau=50)
-
+        syns = pop.connect(source=source, syn_num_per_source=1,
+                           delay=1, neuromodulatory_weight=0.1,
+                           random_weight_mean=0.8, netcon_weight=0.01, rule='all')
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
             self.reward_syns.append(da)
@@ -50,8 +45,5 @@ class EbnerAgent(Agent):
         return pop
 
     def _make_records(self):
-        rec0 = [cell.filter_secs("soma")(0.5) for cell in self.input_cells]
-        self.rec_input = Record(rec0, variables='v')
-
-        rec1 = [cell.filter_secs("soma")(0.5) for cell in self.output_cells]
-        self.rec_output = Record(rec1, variables='v')
+        self.rec_input = self.get_records(cells=self.input_cells)
+        self.rec_output = self.get_records(cells=self.output_cells)

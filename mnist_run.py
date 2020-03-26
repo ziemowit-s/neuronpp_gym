@@ -5,11 +5,10 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 from agents.agent import Kernel
+from agents.ebner_agent import EbnerAgent
+from agents.sigma3_agent import Sigma3Agent
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 from neuronpp.utils.spikes_heatmap_graph import SpikesHeatmapGraph
-
-from agents.ebner_agent import EbnerAgent
-from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
 
 
 def mnist_prepare(num=10):
@@ -57,10 +56,12 @@ def make_mnist_imshow(x_train, agent):
     return obj, ax
 
 
-AGENT_STEPSIZE = 60  # in ms - how long agent will look on a single mnist image
+AGENT_STEPSIZE = 80  # in ms - how long agent will look on a single mnist image
 MNIST_LABELS = 3  # how much mnist digits we want
 SKIP_PIXELS = 2  # how many pixels on mnist we want to skip (image will make smaller)
-MAX_AVG_SIZE = 50
+
+EPSILON_OUTPUT = 1  # Min epsilon difference between 2 the best output and the next one to decide if agent answered (otherwise answer: -1)
+MAX_AVG_SIZE = 50  # Max size of average window to count accuracy
 
 # Prepare mnist dataset
 x_train, y_train = mnist_prepare(num=MNIST_LABELS)
@@ -104,11 +105,13 @@ while True:
         stepsize = None
 
     # Make step and get agent predictions
-    outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)
-    output = outputs[0]
     predicted = -1
-    if output.value > -1:
-        predicted = output.index
+    outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value, poisson=True)
+    print('output:', " / ".join(["%s:%s" % (o.index, o.value) for o in outputs]))
+
+    if (outputs[0].value - outputs[1].value) >= EPSILON_OUTPUT:
+        predicted = outputs[0].index
+        print("answer:", predicted)
 
     # Make reward
     if avg_acc_fifo.qsize() == MAX_AVG_SIZE:
@@ -116,7 +119,7 @@ while True:
     if predicted == y:
         avg_acc_fifo.put(1)
         reward = 1
-        print("i:", index, "value:", y)
+        print("CORRECT!")
     else:
         avg_acc_fifo.put(0)
         reward = -1
@@ -135,6 +138,7 @@ while True:
 
     # Make reward step
     agent.reward_step(reward=reward, stepsize=50)
+
     # Write time after agent step
     agent_compute_time = time.time()
 
