@@ -1,3 +1,5 @@
+from neuronpp.utils.utils import set_random_normal_weights
+
 from neuronpp.cells.cell import Cell
 from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
 from neuronpp.core.populations.population import Population
@@ -31,6 +33,9 @@ class EbnerModulatoryPopulation(Population):
         secs = cell.filter_secs("apic")
         syns_4p, heads = cell.add_synapses_with_spine(source=source, mod_name="Syn4PAChDa", secs=secs, number=syn_num_per_source,
                                                       netcon_weight=netcon_weight, delay=delay, **kwargs)
+
+        set_random_normal_weights(point_processes=[s.point_process for s in syns_4p], mean=1,
+                                  std=1 / 4)
 
         # Add neuromodulators
         syns_ach = []

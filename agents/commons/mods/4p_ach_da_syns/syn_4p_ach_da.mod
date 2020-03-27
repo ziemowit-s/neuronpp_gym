@@ -16,8 +16,8 @@ ENDCOMMENT
   	POINTER last_max_w_Da
 
   	:ACh/DA params
-  	RANGE ACh, ACh_tau, stdp_ach, ach_stdp
-  	RANGE Da, Da_tau, stdp_da, da_stdp
+  	RANGE ACh, ACh_tau, A_ACh, stdp_ach, ach_stdp
+  	RANGE Da, Da_tau, A_Da, stdp_da, da_stdp
 
   	: Parameters & variables of the original Exp2Syn
   	RANGE tau_a, tau_b, e, i
@@ -34,7 +34,7 @@ ENDCOMMENT
   	RANGE theta_u_N, tau_Z_a, tau_Z_b, m_Z, tau_N_alpha, tau_N_beta, m_N_alpha, m_N_beta, theta_N_X
   	RANGE theta_u_C, theta_C_minus, theta_C_plus, tau_K_alpha, tau_K_gamma, m_K_alpha, m_K_beta, s_K_beta
 
-  	RANGE LTD_pre, LTP_pre, LTD_post, LTP_post
+  	RANGE E, LTD_pre, LTP_pre, LTD_post, LTP_post
   }
 
   UNITS {
@@ -46,6 +46,9 @@ ENDCOMMENT
   PARAMETER {
     ACh_tau = 50 (ms) <1e-9, 1e9>
     Da_tau = 50 (ms) <1e-9, 1e9>
+
+    A_ACh = 1e-4 : amplitude of ACh
+    A_Da = 1e-4 : amplitude of Da
 
   	: Parameters of the original Exp2Syn
   	tau_a = 0.2 (ms) <1e-9,1e9>			: time constant of EPSP rise // used for AMPAR currents
@@ -233,13 +236,13 @@ ENDCOMMENT
   		D = 1
   	    flag_D = -1
   	    if(ach_stdp > 0) {
-  	        ACh = ach_stdp
+  	        ACh = ach_stdp * w
   	        ach_stdp = 0
   	    } else {
   	        stdp_ach = 1
   	    }
   	    if(da_stdp > 0){
-  	        Da = da_stdp
+  	        Da = da_stdp * w
   	        da_stdp = 0
   	    } else {
   	        stdp_da = 1
@@ -254,7 +257,7 @@ ENDCOMMENT
   	    flag_D_ACh = -1
 
   	    if(stdp_ach > 0){
-  	        ACh = stdp_ach * ACh_w
+  	        ACh = stdp_ach * ACh_w * w
   	        stdp_ach = 0
   	        ach_stdp = 0
         } else {
@@ -268,7 +271,7 @@ ENDCOMMENT
   	    flag_D_Da = -1
 
   	    if(stdp_da > 0){
-  	        Da = stdp_da * Da_w
+  	        Da = stdp_da * Da_w * w
   	        stdp_da = 0
   	        da_stdp = 0
         } else {
@@ -337,8 +340,8 @@ ENDCOMMENT
     : DA acts on LTP_post; ACh has no effect on LTP_post
 
     E = D * T
-    LTD_pre  = - A_LTD_pre  * (E + ACh * (last_max_w_Da-Da)/last_max_w_Da * Eta) : Eta only for ACh/Da
-  	LTP_post =   A_LTP_post * (K + Da) * Eta : Eta for all params
+    LTD_pre  = - (A_LTD_pre  * E) - (A_ACh * ACh * (last_max_w_Da-Da)/last_max_w_Da * Eta): Eta only for ACh/Da
+  	LTP_post =   ( (A_LTP_post * K) + (A_Da * Da) ) * Eta : Eta for all params
 
   	: Update weights
   	w_pre = w_pre + LTD_pre + LTP_pre

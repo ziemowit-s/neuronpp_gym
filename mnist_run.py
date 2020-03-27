@@ -56,41 +56,47 @@ def make_mnist_imshow(x_train, agent):
     return obj, ax
 
 
-AGENT_STEPSIZE = 80  # in ms - how long agent will look on a single mnist image
-MNIST_LABELS = 3  # how much mnist digits we want
+AGENT_STEPSIZE = 60  # in ms - how long agent will look on a single mnist image
+MNIST_LABELS = 2  # how much mnist digits we want
 SKIP_PIXELS = 2  # how many pixels on mnist we want to skip (image will make smaller)
 
 EPSILON_OUTPUT = 1  # Min epsilon difference between 2 the best output and the next one to decide if agent answered (otherwise answer: -1)
-MAX_AVG_SIZE = 50  # Max size of average window to count accuracy
+MAX_AVG_SIZE = 20  # Max size of average window to count accuracy
 
 # Prepare mnist dataset
 x_train, y_train = mnist_prepare(num=MNIST_LABELS)
 x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 
 # Create Agent
-agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=100, default_stepsize=AGENT_STEPSIZE)
+agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=80, default_stepsize=AGENT_STEPSIZE)
+#agent = Sigma3Agent(output_cell_num=2, input_max_hz=80, default_stepsize=AGENT_STEPSIZE, netcon_weight=0.01, ach_tau=10, da_tau=20)
 agent.build(input_shape=x_train.shape[1:],
-            x_kernel=Kernel(size=4, padding=1, stride=4),
-            y_kernel=Kernel(size=4, padding=1, stride=4))
-agent.init(init_v=-80, warmup=2000, dt=0.2)
+            x_kernel=Kernel(size=2, padding=1, stride=2),
+            y_kernel=Kernel(size=2, padding=1, stride=2))
+#agent.init(init_v=-80, warmup=2000, dt=0.3)
+agent.init(init_v=-70, warmup=100, dt=0.2)
 print("Input neurons:", agent.input_cell_num)
 
 # Show and update mnist image
 imshow_obj, ax = make_mnist_imshow(x_train, agent)
 
 # Create heatmap graph for input cells
-hitmap_shape = int(np.ceil(np.sqrt(agent.input_cell_num)))
-hitmap_graph = SpikesHeatmapGraph(name="Input Cells", cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
+#hitmap_shape = int(np.ceil(np.sqrt(agent.input_cell_num)))
+#hitmap_graph = SpikesHeatmapGraph(name="Input Cells", cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
 
-# Create network graph
-network_graph = NetworkStatusGraph(cells=[c for c in agent.cells if not "mot" in c.name])
-network_graph.plot()
+# Get output synapses
+syns0 = [s for s in agent.output_cells[0].syns if "synach" not in s.name.lower() and "synda" not in s.name.lower()]
+#syns1 = [s for s in agent.output_cells[1].syns if "synach" not in s.name.lower() and "synda" not in s.name.lower()]
+#syns0 = [s for s in agent.output_cells[0].syns]
+#syns1 = [s for s in agent.output_cells[1].syns]
+cell0_weight_graph = WeightsHeatmapGraph(name="Cell 0 weights", syns=syns0, shape=(8, 8))
+#cell1_weight_graph = WeightsHeatmapGraph(name="Cell 1 weights", syns=syns1, shape=(8, 8))
 
 # %%
 index = 0
 reward = None
 agent_compute_time = 0
-avg_acc_fifo = queue.Queue(maxsize=MAX_AVG_SIZE)
+accuracy_fifo = queue.Queue(maxsize=MAX_AVG_SIZE)
 
 while True:
     # Get current mnist data
@@ -107,36 +113,46 @@ while True:
     # Make step and get agent predictions
     predicted = -1
     outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value, poisson=True)
-    print('output:', " / ".join(["%s:%s" % (o.index, o.value) for o in outputs]))
 
-    if (outputs[0].value - outputs[1].value) >= EPSILON_OUTPUT:
-        predicted = outputs[0].index
-        print("answer:", predicted)
-
-    # Make reward
-    if avg_acc_fifo.qsize() == MAX_AVG_SIZE:
-        avg_acc_fifo.get()
-    if predicted == y:
-        avg_acc_fifo.put(1)
-        reward = 1
-        print("CORRECT!")
-    else:
-        avg_acc_fifo.put(0)
-        reward = -1
-
-    # Update graphs
-    network_graph.update_spikes(agent.sim.t)
-    network_graph.update_weights('w')
-    hitmap_graph.plot()
+    # Update output text
+    output_txt = 'i: %s output: %s' % (index, " / ".join(["%s:%s" % (o.index, o.value) for o in outputs]))
 
     # Update visualizations
     imshow_obj.set_data(agent.pad_2d_observation(obs))
-    avg_accuracy = round(np.average(list(avg_acc_fifo.queue)), 2)
-    ax.set_title('Predicted: %s True: %s, AVG_ACC: %s' % (predicted, y, avg_accuracy))
+    avg_accuracy = round(np.average(accuracy_fifo.queue), 2)
+    ax.set_title('%s: Predicted: %s True: %s, AVG_ACC: %s' % (index, predicted, y, avg_accuracy))
     plt.draw()
     plt.pause(1e-9)
 
-    # Make reward step
+    # Update graphs
+    if index % 10 == 0:
+        cell0_weight_graph.plot()
+        #cell1_weight_graph.plot()
+
+    if (outputs[0].value - outputs[1].value) >= EPSILON_OUTPUT:
+        predicted = outputs[0].index
+        output_txt = "%s answer: %s" % (output_txt, predicted)
+
+    print(output_txt)
+
+    # Update accuracy
+    if accuracy_fifo.qsize() == MAX_AVG_SIZE:
+        accuracy_fifo.get()
+    if predicted == y:
+        accuracy_fifo.put(1)
+    else:
+        accuracy_fifo.put(0)
+
+    # Make reward
+    if predicted == -1:
+        reward = np.random.randint(-1, 2, 1)[0]
+        print("random rew:", reward)
+    elif predicted == y:
+        reward = 1
+        print("CORRECT!")
+    else:
+        reward = -1
+
     agent.reward_step(reward=reward, stepsize=50)
 
     # Write time after agent step
@@ -146,5 +162,5 @@ while True:
     index += 1
 
     # make visuatization of mV on each cells by layers
-    # agent.rec_input.plot(animate=True, position=(4, 4))
-    # agent.rec_output.plot(animate=True)
+    #agent.rec_input.plot(animate=True, position=(4, 4))
+    #agent.rec_output.plot(animate=True)
