@@ -1,9 +1,6 @@
-import numpy as np
 import time
 
-from agents.ebner_agent import EbnerAgent
 from agents.sigma3_agent import Sigma3Agent
-from neuronpp.utils.spikes_heatmap_graph import SpikesHeatmapGraph
 
 from agents.agent import Kernel
 from utils import get_env, prepare_pong_observation, reset

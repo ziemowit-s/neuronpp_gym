@@ -6,10 +6,8 @@ import matplotlib.pyplot as plt
 
 from agents.agent import Kernel
 from agents.ebner_agent import EbnerAgent
-from agents.sigma3_agent import Sigma3Agent
-from neuronpp.utils.network_status_graph import NetworkStatusGraph
-from neuronpp.utils.spikes_heatmap_graph import SpikesHeatmapGraph
-from neuronpp.utils.weights_heatmap_graph import WeightsHeatmapGraph
+from neuronpp.utils.graphs.heatmap_graph import HeatmapGraph
+from neuronpp.utils.graphs.spikes_heatmap_graph import SpikesHeatmapGraph
 
 
 def mnist_prepare(num=10):
@@ -71,9 +69,7 @@ x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 # Create Agent
 agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=80, default_stepsize=AGENT_STEPSIZE)
 #agent = Sigma3Agent(output_cell_num=2, input_max_hz=80, default_stepsize=AGENT_STEPSIZE, netcon_weight=0.01, ach_tau=10, da_tau=20)
-agent.build(input_shape=x_train.shape[1:],
-            x_kernel=Kernel(size=2, padding=1, stride=2),
-            y_kernel=Kernel(size=2, padding=1, stride=2))
+agent.build(input_shape=x_train.shape[1:], x_kernel=Kernel(size=2, padding=1, stride=2), y_kernel=Kernel(size=2, padding=1, stride=2))
 #agent.init(init_v=-80, warmup=2000, dt=0.3)
 agent.init(init_v=-70, warmup=100, dt=0.2)
 print("Input neurons:", agent.input_cell_num)
@@ -81,17 +77,11 @@ print("Input neurons:", agent.input_cell_num)
 # Show and update mnist image
 imshow_obj, ax = make_mnist_imshow(x_train, agent)
 
-# Create heatmap graph for input cells
-#hitmap_shape = int(np.ceil(np.sqrt(agent.input_cell_num)))
-#hitmap_graph = SpikesHeatmapGraph(name="Input Cells", cells=agent.input_cells, shape=(hitmap_shape, hitmap_shape))
+# Create heatmaps
+spike_heatmap = SpikesHeatmapGraph(name="Input Cells", cells=agent.input_cells, shape=(8, 8))
 
-# Get output synapses
 syns0 = [s for s in agent.output_cells[0].syns if "synach" not in s.name.lower() and "synda" not in s.name.lower()]
-#syns1 = [s for s in agent.output_cells[1].syns if "synach" not in s.name.lower() and "synda" not in s.name.lower()]
-#syns0 = [s for s in agent.output_cells[0].syns]
-#syns1 = [s for s in agent.output_cells[1].syns]
-cell0_weight_graph = WeightsHeatmapGraph(name="Cell 0 weights", syns=syns0, shape=(8, 8))
-#cell1_weight_graph = WeightsHeatmapGraph(name="Cell 1 weights", syns=syns1, shape=(8, 8))
+weight_heatmap = HeatmapGraph(name="Output Cell_0 weights", extract_func=lambda x: x.hoc.w, elements=syns0, shape=(8, 8))
 
 # %%
 index = 0
@@ -126,9 +116,8 @@ while True:
     plt.pause(1e-9)
 
     # Update graphs
-    if index % 10 == 0:
-        cell0_weight_graph.plot()
-        #cell1_weight_graph.plot()
+    weight_heatmap.plot()
+    spike_heatmap.plot()
 
     if (outputs[0].value - outputs[1].value) >= EPSILON_OUTPUT:
         predicted = outputs[0].index
