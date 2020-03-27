@@ -159,7 +159,7 @@ def main(display_interval):
             #                       show_true_predicted=True, true_labels=[0, 1, 2])
             agent.rec_output.plot(animate=True,
                                   steps=int(AGENT_STEPSIZE / DT + 2 * display_interval * AGENT_STEPSIZE / DT),
-                                  true_class=last_true, pred_class=last_predicted, run_param=run_params)
+                                  true_class=last_true, pred_class=last_predicted, run_params=run_params)
             plt.draw()
             plt.pause(1)
             print("{:05d}               \t".format(processed), correct_arr, "/", predict_arr,
