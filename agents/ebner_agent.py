@@ -3,11 +3,12 @@ from neuronpp.utils.record import Record
 
 from agents.agent import Agent
 from populations.Exp2SynPopulation import Exp2SynPopulation
-from populations.ebner_modulatory_population import EbnerModulatoryPopulation
-from populations.ebner_hebbian_population import EbnerHebbianPopulation
+# from populations.ebner_modulatory_population import EbnerModulatoryPopulation
+# from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from populations.ebner_neuromodulatory_population import EbnerNeuromodulatoryPopulation
 
-#WEIGHT = 0.0035  # From Ebner et al. 2019
+
+# WEIGHT = 0.0035  # From Ebner et al. 2019
 
 class EbnerAgent(Agent):
     def __init__(self, output_cell_num, input_max_hz, netcon_weight=0.01, default_stepsize=20, ach_tau=50, da_tau=50):
