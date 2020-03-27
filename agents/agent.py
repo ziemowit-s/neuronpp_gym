@@ -170,7 +170,7 @@ class Agent:
                 break
         return output
 
-    def step(self, observation, output_type="time", sort_func=None, poisson=False, stepsize=None):
+    def step(self, observation, output_type="time", sort_func=None, poisson=False, stepsize=None, epsilon=1):
         """
         :param observation:
             numpy array. 1 or 2 dim are allowed
@@ -325,8 +325,8 @@ class Agent:
                 "Observation must be of same size as self.input_size, which is a product of input_shape.")
 
         cell_i = 0
-        for y in range(0, self.input_shape[0], self.y_kernel.stride):
-            for x in range(0, self.input_shape[1], self.x_kernel.stride):
+        for y in range(0, self.input_shape[0] - self.y_kernel.size, self.y_kernel.stride):
+            for x in range(0, self.input_shape[1] - self.x_kernel.size, self.x_kernel.stride):
 
                 current_cell = self.input_cells[cell_i]
                 window = obs[y:y + self.y_kernel.size, x:x + self.x_kernel.size]

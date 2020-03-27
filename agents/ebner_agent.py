@@ -24,6 +24,8 @@ class EbnerAgent(Agent):
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
+        # todo input_synPer_cell should cover the whole input of a kernel at least
+        input_syn_per_cell = self.x_kernel.size * self.y_kernel.size
         input_pop = Exp2SynPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=self.netcon_weight,

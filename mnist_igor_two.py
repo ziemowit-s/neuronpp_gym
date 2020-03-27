@@ -1,4 +1,5 @@
 import argparse
+import collections
 import sys
 import time
 
@@ -90,8 +91,8 @@ def main(display_interval):
     reward = None
 
     graph = NetworkStatusGraph(cells=[c for c in agent.cells if not "mot" in c.name])
-    graph.plot()
-    plt.draw()
+    # graph.plot()
+    # plt.draw()
 
     # %%
     agent_compute_time = 0
@@ -102,6 +103,10 @@ def main(display_interval):
     processed = 0
     last_true = []
     last_predicted = []
+    Simulation_params = collections.namedtuple("Simulation_params",
+                                               "agent_stepsize dt input_cell_num output_cell_num output_labels show_true_predicted")
+    run_params = Simulation_params(agent_stepsize=AGENT_STEPSIZE, dt=DT, input_cell_num=INPUT_CELL_NUM,
+                                   output_cell_num=MNIST_LABELS, output_labels=[0, 1, 2], show_true_predicted=True)
     while True:
         y = y_train[index]
         # downsample input
@@ -147,10 +152,14 @@ def main(display_interval):
             # agent.rec_input.plot(animate=True, position=(4, 4))
             # info display output act for last display_interval examples
             # info left AGENT_STEPSIZE / DT for additional steps on the left of display
+
+            # agent.rec_output.plot(animate=True,
+            #                       steps=int(AGENT_STEPSIZE / DT + 2 * display_interval * AGENT_STEPSIZE / DT),
+            #                       true_class=last_true, pred_class=last_predicted, stepsize=AGENT_STEPSIZE, dt=DT,
+            #                       show_true_predicted=True, true_labels=[0, 1, 2])
             agent.rec_output.plot(animate=True,
                                   steps=int(AGENT_STEPSIZE / DT + 2 * display_interval * AGENT_STEPSIZE / DT),
-                                  true_class=last_true, pred_class=last_predicted, stepsize=AGENT_STEPSIZE, dt=DT,
-                                  show_true_predicted=True, true_labels=[0, 1, 2])
+                                  true_class=last_true, pred_class=last_predicted, run_param=run_params)
             plt.draw()
             plt.pause(1)
             print("{:05d}               \t".format(processed), correct_arr, "/", predict_arr,
