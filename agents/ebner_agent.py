@@ -1,10 +1,8 @@
 import numpy as np
-
 from neuronpp.utils.record import Record
 
 from agents.agent import Agent
 from populations.Exp2SynPopulation import Exp2SynPopulation
-from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from populations.ebner_modulatory_population import EbnerModulatoryPopulation
 
 

@@ -5,7 +5,6 @@ from typing import List
 
 import numpy as np
 from neuronpp.cells.cell import Cell
-
 from neuronpp.core.cells.core_cell import CoreCell
 from neuronpp.core.populations.population import Population
 from neuronpp.utils.record import Record
@@ -85,8 +84,10 @@ class Agent:
         if not isinstance(input_shape, tuple) or len(input_shape) != 2:
             raise ValueError("2 dim input shape can be only a tuple of size 2.")
 
-        self.x_kernel_num = self.get_kernel_size(w=input_shape[1], f=x_kernel.size, p=x_kernel.padding, s=x_kernel.stride)
-        self.y_kernel_num = self.get_kernel_size(w=input_shape[0], f=y_kernel.size, p=y_kernel.padding, s=y_kernel.stride)
+        self.x_kernel_num = self.get_kernel_size(w=input_shape[1], f=x_kernel.size, p=x_kernel.padding,
+                                                 s=x_kernel.stride)
+        self.y_kernel_num = self.get_kernel_size(w=input_shape[0], f=y_kernel.size, p=y_kernel.padding,
+                                                 s=y_kernel.stride)
 
         self.x_kernel = x_kernel
         self.y_kernel = y_kernel
@@ -106,15 +107,18 @@ class Agent:
             raise RuntimeError("Simulation cannot been run before build.")
 
         self.input_cells, self.output_cells = self._build_network(input_cell_num=self.input_cell_num,
-                                                                  input_size=self.input_size, output_cell_num=self.output_cell_num)
+                                                                  input_size=self.input_size,
+                                                                  output_cell_num=self.output_cell_num)
 
         if len(self.input_cells) != self.input_cell_num:
-            raise ValueError("Based on Kernel size input_cell_num is %s, however input_cells returned by _build_network() is: %s" %
-                             (self.input_cell_num, len(self.input_cells)))
+            raise ValueError(
+                "Based on Kernel size input_cell_num is %s, however input_cells returned by _build_network() is: %s" %
+                (self.input_cell_num, len(self.input_cells)))
 
         if len(self.output_cells) != self.output_cell_num:
-            raise ValueError("Based on Kernel size output_cell_num is %s, however output_cells returned by _build_network() is: %s" %
-                             (self.output_cell_num, len(self.output_cells)))
+            raise ValueError(
+                "Based on Kernel size output_cell_num is %s, however output_cells returned by _build_network() is: %s" %
+                (self.output_cell_num, len(self.output_cells)))
 
         self._make_motor_cells(output_cells=self.output_cells, output_cell_num=self.output_cell_num)
         self._make_records()
@@ -189,7 +193,8 @@ class Agent:
         """
         # Check agent's built and initialization before step
         if not self._agent_builded:
-            raise RuntimeError("Before step you need to build() agent and then initialize by calling init() function first.")
+            raise RuntimeError(
+                "Before step you need to build() agent and then initialize by calling init() function first.")
 
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
@@ -230,7 +235,8 @@ class Agent:
         if not self._agent_builded:
             raise RuntimeError("Before making reward you need to build the Agent by calling build() function first.")
         if self.sim is None:
-            raise RuntimeError("Before making reward you need to initialize the Agent by calling init() function first.")
+            raise RuntimeError(
+                "Before making reward you need to initialize the Agent by calling init() function first.")
 
         if reward > 0:
             for s in self.reward_syns:
@@ -254,7 +260,8 @@ class Agent:
 
     def pad_2d_observation(self, obs):
         if self.x_kernel is None or self.y_kernel is None:
-            raise RuntimeError("Before calling pad_observation() you need to build the Agent by calling build() function first.")
+            raise RuntimeError(
+                "Before calling pad_observation() you need to build the Agent by calling build() function first.")
         return np.pad(obs, (self.x_kernel.padding, self.y_kernel.padding), 'constant', constant_values=(0, 0))
 
     @staticmethod
@@ -414,8 +421,9 @@ class Agent:
             if oc._spike_detector is None:
                 soma = oc.filter_secs("soma")
                 if isinstance(soma, list):
-                    raise LookupError("Output cells need to setup spike detector or at least have a single 'soma' section"
-                                      "so that spike detection can be implemented automatically.")
+                    raise LookupError(
+                        "Output cells need to setup spike detector or at least have a single 'soma' section"
+                        "so that spike detection can be implemented automatically.")
 
                 oc.make_spike_detector(soma(0.5))
 
