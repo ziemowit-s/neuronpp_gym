@@ -16,12 +16,12 @@ class EbnerHebbianPopulation(Population):
         return cell
 
     def syn_definition(self, cell: Ebner2019Cell, source, syn_num_per_source=1, delay=1, netcon_weight=1,
-                       random_weight_mean=None, **kwargs):
+                       random_weights=None, **kwargs):
         secs = cell.filter_secs("apic")
         syns_4p, heads = cell.add_synapses_with_spine(source=source, mod_name="Syn4P", secs=secs, number=syn_num_per_source,
                                                       netcon_weight=netcon_weight, delay=delay, **kwargs)
 
-        if random_weight_mean:
-            set_random_normal_weights(point_processes=[s.point_process for s in syns_4p], mean=random_weight_mean,
-                                      std=random_weight_mean)
+        if random_weights:
+            set_random_normal_weights(point_processes=[s.point_process for s in syns_4p], mean=0.5, std=1 / 8, weight_name="w_pre_init")
+            set_random_normal_weights(point_processes=[s.point_process for s in syns_4p], mean=2, std=1 / 8, weight_name="w_post_init")
         return syns_4p

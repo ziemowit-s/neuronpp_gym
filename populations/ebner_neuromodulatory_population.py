@@ -5,7 +5,7 @@ from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
 from neuronpp.core.populations.population import Population
 
 
-class EbnerModulatoryPopulation(Population):
+class EbnerNeuromodulatoryPopulation(Population):
 
     def cell_definition(self, **kwargs) -> Cell:
         name = "EbnerModulatory_%s" % self.cell_counter
@@ -17,7 +17,7 @@ class EbnerModulatoryPopulation(Population):
         return cell
 
     def syn_definition(self, cell: Ebner2019AChDACell, source, syn_num_per_source=1, delay=1, netcon_weight=1,
-                       ach_weight=0.1, da_weight=0.01, **kwargs):
+                       ach_weight=0.1, da_weight=0.01, random_weights=False, **kwargs):
         """
         Random weight not work here due to ebner type of computing w (!)
 
@@ -26,16 +26,15 @@ class EbnerModulatoryPopulation(Population):
         :param syn_num_per_source:
         :param delay:
         :param netcon_weight:
-        :param neuromodulatory_netcon_weight:
         :param kwargs:
         :return:
         """
         secs = cell.filter_secs("apic")
         syns_4p, heads = cell.add_synapses_with_spine(source=source, mod_name="Syn4PAChDa", secs=secs, number=syn_num_per_source,
                                                       netcon_weight=netcon_weight, delay=delay, **kwargs)
-
-        set_random_normal_weights(point_processes=[s.point_process for s in syns_4p], mean=1,
-                                  std=1 / 4)
+        if random_weights:
+            set_random_normal_weights(point_processes=[s.point_process for s in syns_4p], mean=0.5, std=1/8, weight_name="w_pre_init")
+            set_random_normal_weights(point_processes=[s.point_process for s in syns_4p], mean=2, std=1/8, weight_name="w_post_init")
 
         # Add neuromodulators
         syns_ach = []

@@ -4,7 +4,7 @@ from neuronpp.utils.record import Record
 from agents.agent import Agent
 from populations.Exp2SynPopulation import Exp2SynPopulation
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
-from populations.ebner_modulatory_population import EbnerModulatoryPopulation
+from populations.ebner_neuromodulatory_population import EbnerNeuromodulatoryPopulation
 
 #WEIGHT = 0.0035  # From Ebner et al. 2019
 
@@ -34,12 +34,12 @@ class EbnerAgent(Agent):
         return input_pop.cells, output_pop.cells
 
     def _make_modulatory_population(self, name, cell_num, source=None):
-        pop = EbnerModulatoryPopulation(name)
+        pop = EbnerNeuromodulatoryPopulation(name)
         pop.create(cell_num)
 
         syns = pop.connect(source=source,
                            delay=1, netcon_weight=self.netcon_weight, ach_weight=1, da_weight=1, rule='all',
-                           ACh_tau=self.ach_tau, Da_tau=self.da_tau)
+                           ACh_tau=self.ach_tau, Da_tau=self.da_tau, random_weights=True)
 
         # Prepare synapses for reward and punish
         for hebb, ach, da in [s for slist in syns for s in slist]:
