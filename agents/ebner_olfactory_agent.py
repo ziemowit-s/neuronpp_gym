@@ -7,7 +7,7 @@ from agents.agent import Agent
 from agents.ebner_agent import EbnerAgent
 from populations.Exp2SynPopulation import Exp2SynPopulation
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
-from populations.ebner_modulatory_population import EbnerModulatoryPopulation
+from populations.ebner_neuromodulatory_population import EbnerNeuromodulatoryPopulation
 
 
 WEIGHT = 0.0035  # From Ebner et al. 2019
