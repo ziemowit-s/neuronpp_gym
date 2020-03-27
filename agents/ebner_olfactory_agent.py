@@ -5,6 +5,7 @@ from neuronpp.utils.record import Record
 
 from agents.agent import Agent
 from agents.ebner_agent import EbnerAgent
+from populations.Exp2SynPopulation import Exp2SynPopulation
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from populations.ebner_modulatory_population import EbnerModulatoryPopulation
 
@@ -25,10 +26,17 @@ class EbnerOlfactoryAgent(EbnerAgent):
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         # INPUTS
-        input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
-        input_pop = EbnerHebbianPopulation("inp_0")
+        # todo input_synPer_cell should cover the whole input of a kernel at least
+        input_syn_per_cell = self.x_kernel.size * self.y_kernel.size
+        input_pop = Exp2SynPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
-        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=WEIGHT, rule='one')
+        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=self.netcon_weight,
+                          rule='one')
+
+        # input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
+        # input_pop = EbnerHebbianPopulation("inp_0")
+        # input_pop.create(cell_num=input_cell_num)
+        # input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=WEIGHT, rule='one')
 
         # HIDDEN
         self.hidden_pop = self._make_modulatory_population("hid_1", cell_num=12, source=input_pop)

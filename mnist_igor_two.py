@@ -11,8 +11,10 @@ from neuronpp.cells.cell import Cell
 from neuronpp.utils.network_status_graph import NetworkStatusGraph
 
 from agents.agent import Kernel
-from agents.ebner_agent import EbnerAgent
 from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
+from agents.ebner_agent import EbnerAgent
+
+np.set_printoptions(precision=3)
 
 # print(sys.path)
 # sys.path.extend('/Users/igor/git/neuronpp/neuronpp')
@@ -62,13 +64,16 @@ class EbOlA(EbnerOlfactoryAgent):
 
 
 def main(display_interval):
+    Simulation_params = collections.namedtuple("Simulation_params",
+                                               "agent_class agent_stepsize dt input_cell_num output_cell_num output_labels show_true_predicted")
+
     x_train, y_train = mnist_prepare(num=MNIST_LABELS)
     # warning  use cv2 downsampling function: in agent build pass shapes _after_ downsampling
     # x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 
     # info build the agent architecture
-    agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
-    # agent = EbnerOlfactoryAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+    # agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+    agent = EbnerOlfactoryAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
     # agent = EbOlA(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
     kernel_size = 5
     padding = 3
@@ -78,7 +83,10 @@ def main(display_interval):
                 y_kernel=Kernel(size=kernel_size, padding=padding, stride=stride))
     agent.init(init_v=RESTING_POTENTIAL, warmup=int(2 * display_interval * AGENT_STEPSIZE / DT), dt=DT)
     print("Agent {:s}\n\tinput cell number: {:d}\n\tpixels per input cell: ???".format(agent.__class__.__name__,
-                                                                                       agent.input_cell_num))  # , agent.input_syn_per_cell)
+                                                                                       agent.input_cell_num))  # , agent.input_syn_per_cell))
+    run_params = Simulation_params(agent_class=agent.__class__.__name__, agent_stepsize=AGENT_STEPSIZE, dt=DT,
+                                   input_cell_num=INPUT_CELL_NUM, output_cell_num=MNIST_LABELS, output_labels=[0, 1, 2],
+                                   show_true_predicted=True)
 
     # obj, ax = make_imshow(x_train, x_pixel_size=x_pixel_size, y_pixel_size=y_pixel_size)
     heatmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
@@ -103,10 +111,6 @@ def main(display_interval):
     processed = 0
     last_true = []
     last_predicted = []
-    Simulation_params = collections.namedtuple("Simulation_params",
-                                               "agent_stepsize dt input_cell_num output_cell_num output_labels show_true_predicted")
-    run_params = Simulation_params(agent_stepsize=AGENT_STEPSIZE, dt=DT, input_cell_num=INPUT_CELL_NUM,
-                                   output_cell_num=MNIST_LABELS, output_labels=[0, 1, 2], show_true_predicted=True)
     while True:
         y = y_train[index]
         # downsample input
@@ -161,8 +165,10 @@ def main(display_interval):
                                   steps=int(AGENT_STEPSIZE / DT + 2 * display_interval * AGENT_STEPSIZE / DT),
                                   true_class=last_true, pred_class=last_predicted, run_params=run_params)
             plt.draw()
-            plt.pause(1)
+            plt.pause(0.1)
+            ratio = 3 * predict_arr / processed
             print("{:05d}               \t".format(processed), correct_arr, "/", predict_arr,
+                  "/", ratio,
                   "\t({:.3f}%)".format(np.sum(correct_arr) / (processed + 1)))
 
         index += 1
