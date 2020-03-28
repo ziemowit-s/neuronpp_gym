@@ -13,7 +13,7 @@ from agents.agent import Kernel
 from agents.ebner_agent import EbnerAgent
 from agents.ebner_olfactory_agent import EbnerOlfactoryAgent
 
-# from neuronpp.utils.network_status_graph import NetworkStatusGraph
+from neuronpp.utils.graphs.network_status_graph import NetworkStatusGraph
 
 np.set_printoptions(precision=3)
 
