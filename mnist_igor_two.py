@@ -41,7 +41,6 @@ RESTING_POTENTIAL = -70
 
 class QueueNP:
     def __init__(self, class_no: int, length: int = 250, alpha: float = 0.9, gamma: float = 0.99):
-        # todo init to possible push values
         self._queue = np.zeros(shape=length, dtype=int)
         self._length = length
         self._pushed = 0
@@ -61,7 +60,7 @@ class QueueNP:
         self._queue[:-1] = self._queue[1:]
         self._queue[-1] = r
         self._pushed = np.min((self._pushed + 1, self._length))
-        # todo perhaps modify to compute the qval inside the que (?)
+        # todo perhaps modify to compute the qval inside the queue (?)
         self._qval = qval
         for k in range(self._class_no):
             if k == true:

@@ -22,7 +22,7 @@ class EbnerAgent(Agent):
         self.da_tau = da_tau
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
-        # todo input_syn_per_cell should cover the whole input of a kernel (at least)
+        # info input_syn_per_cell should cover the whole input of a kernel (at least)
         input_syn_per_cell = self.x_kernel.size * self.y_kernel.size
         input_pop = Exp2SynPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
