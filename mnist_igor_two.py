@@ -1,7 +1,6 @@
 import argparse
 import collections
 import sys
-import time
 
 import cv2
 import matplotlib.pyplot as plt
@@ -29,7 +28,7 @@ for e in sys.path:
         break
 if not found:
     print("NEURON-7.7 path not found in sys.path; exiting")
-    sys.exit(0)
+    # sys.exit(0)
 
 AGENT_STEPSIZE = 60
 MNIST_LABELS = 3
@@ -37,6 +36,39 @@ SKIP_PIXELS = 2
 INPUT_CELL_NUM = 9
 DT = 0.2
 RESTING_POTENTIAL = -80
+
+EPSILON_OUTPUT = 1  # Min epsilon difference between 2 the best output and the next one to decide if agent answered (otherwise answer: -1)
+
+
+def mnist_prepare(num=10):
+    mnist = tf.keras.datasets.mnist
+
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    x_train, x_test = x_train / 255.0, x_test / 255.0
+
+    index_list = []
+    for i, labels in enumerate(y_train):
+        if labels in list(np.arange(num)):
+            index_list.append(i)
+
+    x_train, y_train = x_train[index_list], y_train[index_list]
+    return x_train, y_train
+
+
+def make_imshow(x_train, x_pixel_size, y_pixel_size):
+    fig, ax = plt.subplots(1, 1)
+
+    x_ticks = np.arange(0, x_train.shape[1], x_pixel_size)
+    y_ticks = np.arange(0, x_train.shape[2], y_pixel_size)
+    ax.set_xticks(x_ticks)
+    ax.set_xticks([i for i in range(x_train.shape[1])], minor=True)
+    ax.set_yticks(y_ticks)
+    ax.set_yticks([i for i in range(x_train.shape[2])], minor=True)
+
+    obj = ax.imshow(x_train[0], cmap=plt.get_cmap('gray'), extent=[0, x_train.shape[1], 0, x_train.shape[2]])
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=1)
+    return obj, ax
 
 
 class EbOlA(EbnerOlfactoryAgent):
@@ -70,12 +102,12 @@ def main(display_interval):
 
     x_train, y_train = mnist_prepare(num=MNIST_LABELS)
     # warning  use cv2 downsampling function: in agent build pass shapes _after_ downsampling
-    # x_train = x_train[:, ::SKIP_PIXELS, ::SKIP_PIXELS]
 
     # info build the agent architecture
     agent = EbnerAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
     # agent = EbnerOlfactoryAgent(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
     # agent = EbOlA(output_cell_num=MNIST_LABELS, input_max_hz=800, default_stepsize=AGENT_STEPSIZE)
+
     kernel_size = 5
     padding = 3
     stride = 3
@@ -88,22 +120,6 @@ def main(display_interval):
     run_params = MarkerParams(agent_class=agent.__class__.__name__, agent_stepsize=AGENT_STEPSIZE, dt=DT,
                               input_cell_num=INPUT_CELL_NUM, output_cell_num=MNIST_LABELS, output_labels=[0, 1, 2])
 
-    # obj, ax = make_imshow(x_train, x_pixel_size=x_pixel_size, y_pixel_size=y_pixel_size)
-    heatmap_shape = int(np.ceil(np.sqrt(INPUT_CELL_NUM)))
-    # heatmap_graph = SpikesHeatmapGraph(name="MNIST heatmap", cells=agent.input_cells, shape=(heatmap_shape, heatmap_shape))
-
-    agent_observe = True
-    start_time = time.time()
-    reset_time = time.time()
-    gain = 0
-    reward = None
-
-    # graph = NetworkStatusGraph(cells=[c for c in agent.cells if not "mot" in c.name])
-    # graph.plot()
-    # plt.draw()
-
-    # %%
-    agent_compute_time = 0
     # the first to start from
     index = 0
     correct_arr = np.zeros(MNIST_LABELS, dtype=int)
@@ -112,23 +128,15 @@ def main(display_interval):
     last_true = []
     last_predicted = []
     while True:
-        y = y_train[index]
         # downsample input
-        # obs = x_train[index]
         obs = cv2.normalize(cv2.resize(x_train[index], (14, 14)), None, 0, 1.0, cv2.NORM_MINMAX)
+        y = y_train[index]
 
-        # write time before agent step
-        current_time_relative = (time.time() - agent_compute_time)
-        # warning what do we need stepsize for?
-        if agent_compute_time > 0:
-            stepsize = current_time_relative * 1000
-        else:
-            stepsize = None
+        outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)
 
-        output = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value)
         predicted = -1
-        if len(output) == 1 and output[0].value > -1:
-            predicted = output[0].index
+        if (outputs[0].value - outputs[1].value) >= EPSILON_OUTPUT:
+            predicted = outputs[0].index
             predict_arr[predicted] += 1
 
         last_true.append(y)
@@ -140,13 +148,12 @@ def main(display_interval):
                   "\t({:.3f}%)".format(np.sum(correct_arr) / (processed + 1)))
         else:
             reward = -1
-        agent.reward_step(reward=reward, stepsize=AGENT_STEPSIZE)
 
-        # write time after agent step
-        agent_compute_time = time.time()
+        agent.reward_step(reward=reward, stepsize=AGENT_STEPSIZE)
 
         last_predicted = last_predicted[-display_interval:]
         last_true = last_true[-display_interval:]
+
         if processed > 0 and processed % display_interval == 0:
             # obj.set_data(obs)
             # ax.set_title('Predicted: %s True: %s' % (predicted, y))
@@ -166,7 +173,8 @@ def main(display_interval):
                                   true_class=last_true, pred_class=last_predicted, show_true_predicted=True,
                                   marker_params=run_params)
             plt.draw()
-            plt.pause(0.1)
+            plt.pause(1e-9)
+
             ratio = 3 * predict_arr / processed
             print("{:05d}               \t".format(processed), correct_arr, "/", predict_arr,
                   "/", ratio,
@@ -176,37 +184,6 @@ def main(display_interval):
         processed += 1
         if index == y_train.shape[0]:
             index = 0
-
-
-def mnist_prepare(num=10):
-    mnist = tf.keras.datasets.mnist
-
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    x_train, x_test = x_train / 255.0, x_test / 255.0
-
-    index_list = []
-    for i, labels in enumerate(y_train):
-        if labels in list(np.arange(num)):
-            index_list.append(i)
-
-    x_train, y_train = x_train[index_list], y_train[index_list]
-    return x_train, y_train
-
-
-def make_imshow(x_train, x_pixel_size, y_pixel_size):
-    fig, ax = plt.subplots(1, 1)
-
-    x_ticks = np.arange(0, x_train.shape[1], x_pixel_size)
-    y_ticks = np.arange(0, x_train.shape[2], y_pixel_size)
-    ax.set_xticks(x_ticks)
-    ax.set_xticks([i for i in range(x_train.shape[1])], minor=True)
-    ax.set_yticks(y_ticks)
-    ax.set_yticks([i for i in range(x_train.shape[2])], minor=True)
-
-    obj = ax.imshow(x_train[0], cmap=plt.get_cmap('gray'), extent=[0, x_train.shape[1], 0, x_train.shape[2]])
-    ax.grid(which='minor', alpha=0.2)
-    ax.grid(which='major', alpha=1)
-    return obj, ax
 
 
 if __name__ == '__main__':

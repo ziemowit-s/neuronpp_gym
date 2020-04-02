@@ -96,13 +96,6 @@ while True:
     obs = x_train[index]
     y = y_train[index]
 
-    # Write time before agent step
-    current_time_relative = (time.time() - agent_compute_time)
-    if agent_compute_time > 0:
-        stepsize = current_time_relative * 1000
-    else:
-        stepsize = None
-
     # Make step and get agent predictions
     predicted = -1
     outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value, poisson=True)
