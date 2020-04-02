@@ -3,8 +3,7 @@ from neuronpp.utils.record import Record
 
 from agents.agent import Agent
 from populations.Exp2SynPopulation import Exp2SynPopulation
-# from populations.ebner_modulatory_population import EbnerModulatoryPopulation
-# from populations.ebner_hebbian_population import EbnerHebbianPopulation
+from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from populations.ebner_neuromodulatory_population import EbnerNeuromodulatoryPopulation
 
 
@@ -23,8 +22,7 @@ class EbnerAgent(Agent):
         self.da_tau = da_tau
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
-        # input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
-        # todo input_synPer_cell should cover the whole input of a kernel at least
+        # todo input_syn_per_cell should cover the whole input of a kernel (at least)
         input_syn_per_cell = self.x_kernel.size * self.y_kernel.size
         input_pop = Exp2SynPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)

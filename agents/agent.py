@@ -161,18 +161,14 @@ class Agent:
         """
         From list of AgentOutput rates select these at least out_epsilon higher than
         :param output: list of AgentOutput activation rates found
-        :param epsilon: the minimal distance
+        :param epsilon: the minimal distance, but not including
         :return: best output list
         """
         if len(output) < 2:
             return output
-        best_val = output[0].value
-        while len(output) > 1:
-            if output[-1].value <= best_val - epsilon:
-                output.pop()
-            else:
-                break
-        return output
+        best_val = max(output, key=(lambda elem: elem.value)).value
+        out = [elem for elem in output if elem.value > best_val - epsilon]
+        return out
 
     def step(self, observation, output_type="time", sort_func=None, poisson=False, stepsize=None, epsilon=1):
         """
@@ -218,8 +214,8 @@ class Agent:
         output = self._get_output(output_type)
         if sort_func:
             output = sorted(output, key=sort_func)
-            if epsilon > 0:
-                output = self._select_best_output(output=output, epsilon=epsilon)
+        if epsilon > 0:
+            output = self._select_best_output(output=output, epsilon=epsilon)
         return output
 
     def reward_step(self, reward, stepsize=None):

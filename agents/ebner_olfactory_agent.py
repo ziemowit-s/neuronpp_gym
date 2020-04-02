@@ -14,7 +14,8 @@ WEIGHT = 0.0035  # From Ebner et al. 2019
 
 
 class EbnerOlfactoryAgent(EbnerAgent):
-    def __init__(self, output_cell_num, input_max_hz, default_stepsize=20):
+    def __init__(self, output_cell_num: int, input_max_hz: int, default_stepsize: int = 20, hidden_cell_num: int = None,
+                 inhib_cell_num: int = None):
         """
         :param output_cell_num:
         :param input_max_hz:
@@ -22,11 +23,14 @@ class EbnerOlfactoryAgent(EbnerAgent):
         """
         self.hidden_cells = []
         self.inhibitory_cells = []
+        self.hidden_cell_num = hidden_cell_num
+        self.inhib_cell_num = inhib_cell_num
         super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, default_stepsize=default_stepsize)
 
+    # todo rewrite the _build_network() so that it would inherit from ebner_agent._build_network()
     def _build_network(self, input_cell_num, input_size, output_cell_num):
         # INPUTS
-        # todo input_synPer_cell should cover the whole input of a kernel at least
+        # info input_syn_per_cell should cover the whole input of a kernel (at least)
         input_syn_per_cell = self.x_kernel.size * self.y_kernel.size
         input_pop = Exp2SynPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
