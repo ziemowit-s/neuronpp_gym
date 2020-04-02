@@ -9,7 +9,7 @@ from neuronpp.cells.cell import Cell
 from neuronpp.core.cells.core_cell import CoreCell
 from neuronpp.core.populations.population import Population
 from neuronpp.utils.record import Record
-from neuronpp.utils.run_sim import RunSim
+from neuronpp.utils.simulation import Simulation
 
 from populations.motor_population import MotorPopulation
 
@@ -134,7 +134,7 @@ class Agent:
             raise RuntimeError("Simulation cannot been run before initialization.")
 
         self.warmup = warmup
-        self.sim = RunSim(init_v=init_v, warmup=warmup, dt=dt)
+        self.sim = Simulation(init_v=init_v, warmup=warmup, dt=dt)
 
     @abc.abstractmethod
     def _build_network(self, input_cell_num, input_size, output_cell_num) -> (List[Cell], List[Cell]):
