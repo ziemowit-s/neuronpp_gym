@@ -157,14 +157,14 @@ class Agent:
         raise NotImplementedError()
 
     @staticmethod
-    def _select_best_output(output: list, epsilon: int = 1) -> list:
+    def _select_best_output(output: list, epsilon=None) -> list:
         """
         From list of AgentOutput rates select these at least out_epsilon higher than
         :param output: list of AgentOutput activation rates found
         :param epsilon: the minimal distance, but not including
         :return: best output list
         """
-        if len(output) < 2:
+        if epsilon is None or len(output) < 2:
             return output
         best_val = max(output, key=(lambda elem: elem.value)).value
         out = [elem for elem in output if elem.value > best_val - epsilon]
