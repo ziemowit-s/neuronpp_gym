@@ -170,7 +170,7 @@ class Agent:
         out = [elem for elem in output if elem.value > best_val - epsilon]
         return out
 
-    def step(self, observation, output_type="time", sort_func=None, poisson=False, stepsize=None, epsilon=1):
+    def step(self, observation, output_type="time", sort_func=None, poisson=False, stepsize=None, epsilon=None):
         """
         :param observation:
             numpy array. 1 or 2 dim are allowed
@@ -214,7 +214,7 @@ class Agent:
         output = self._get_output(output_type)
         if sort_func:
             output = sorted(output, key=sort_func)
-        if epsilon > 0:
+        if epsilon is not None and epsilon > 0:
             output = self._select_best_output(output=output, epsilon=epsilon)
         return output
 
