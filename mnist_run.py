@@ -155,5 +155,5 @@ while True:
     index += 1
 
     # make visuatization of mV on each cells by layers
-    #agent.rec_input.plot(animate=True, position=(8, 8))
-    #agent.rec_output.plot(animate=True)
+    agent.rec_input.plot(animate=True, position=(4, 4))
+    agent.rec_output.plot(animate=True)
