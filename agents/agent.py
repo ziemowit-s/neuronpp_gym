@@ -5,7 +5,6 @@ from typing import List
 
 import numpy as np
 from neuronpp.cells.cell import Cell
-
 from neuronpp.core.cells.core_cell import CoreCell
 from neuronpp.core.populations.population import Population
 from neuronpp.utils.record import Record
@@ -28,7 +27,8 @@ class Agent:
         self.default_stepsize = default_stepsize
         self.max_input_stim_per_stepsize = (default_stepsize * input_max_hz) / 1000
         if self.max_input_stim_per_stepsize < 1:
-            raise ValueError("Agent's self.max_input_stim_per_stepsize must be > 1, choose input_max_hz and stepsize params carefully.")
+            raise ValueError(
+                "Agent's self.max_input_stim_per_stepsize must be > 1, choose input_max_hz and stepsize params carefully.")
         print("max_input_stim_per_stepsize:", self.max_input_stim_per_stepsize)
 
         self.sim = None
@@ -84,8 +84,10 @@ class Agent:
         if not isinstance(input_shape, tuple) or len(input_shape) != 2:
             raise ValueError("2 dim input shape can be only a tuple of size 2.")
 
-        self.x_kernel_num = self.get_kernel_size(w=input_shape[1], f=x_kernel.size, p=x_kernel.padding, s=x_kernel.stride)
-        self.y_kernel_num = self.get_kernel_size(w=input_shape[0], f=y_kernel.size, p=y_kernel.padding, s=y_kernel.stride)
+        self.x_kernel_num = self.get_kernel_size(w=input_shape[1], f=x_kernel.size, p=x_kernel.padding,
+                                                 s=x_kernel.stride)
+        self.y_kernel_num = self.get_kernel_size(w=input_shape[0], f=y_kernel.size, p=y_kernel.padding,
+                                                 s=y_kernel.stride)
 
         self.x_kernel = x_kernel
         self.y_kernel = y_kernel
@@ -105,15 +107,18 @@ class Agent:
             raise RuntimeError("Simulation cannot been run before build.")
 
         self.input_cells, self.output_cells = self._build_network(input_cell_num=self.input_cell_num,
-                                                                  input_size=self.input_size, output_cell_num=self.output_cell_num)
+                                                                  input_size=self.input_size,
+                                                                  output_cell_num=self.output_cell_num)
 
         if len(self.input_cells) != self.input_cell_num:
-            raise ValueError("Based on Kernel size input_cell_num is %s, however input_cells returned by _build_network() is: %s" %
-                             (self.input_cell_num, len(self.input_cells)))
+            raise ValueError(
+                "Based on Kernel size input_cell_num is %s, however input_cells returned by _build_network() is: %s" %
+                (self.input_cell_num, len(self.input_cells)))
 
         if len(self.output_cells) != self.output_cell_num:
-            raise ValueError("Based on Kernel size output_cell_num is %s, however output_cells returned by _build_network() is: %s" %
-                             (self.output_cell_num, len(self.output_cells)))
+            raise ValueError(
+                "Based on Kernel size output_cell_num is %s, however output_cells returned by _build_network() is: %s" %
+                (self.output_cell_num, len(self.output_cells)))
 
         self._make_motor_cells(output_cells=self.output_cells, output_cell_num=self.output_cell_num)
         self._make_records()
@@ -151,7 +156,21 @@ class Agent:
     def _make_records(self):
         raise NotImplementedError()
 
-    def step(self, observation, output_type="time", sort_func=None, poisson=False, stepsize=None):
+    @staticmethod
+    def _select_best_output(output: list, epsilon=None) -> list:
+        """
+        From list of AgentOutput rates select these at least out_epsilon higher than
+        :param output: list of AgentOutput activation rates found
+        :param epsilon: the minimal distance, but not including
+        :return: best output list
+        """
+        if epsilon is None or len(output) < 2:
+            return output
+        best_val = max(output, key=(lambda elem: elem.value)).value
+        out = [elem for elem in output if elem.value > best_val - epsilon]
+        return out
+
+    def step(self, observation, output_type="time", sort_func=None, poisson=False, stepsize=None, epsilon=None):
         """
         :param observation:
             numpy array. 1 or 2 dim are allowed
@@ -170,7 +189,8 @@ class Agent:
         """
         # Check agent's built and initialization before step
         if not self._agent_builded:
-            raise RuntimeError("Before step you need to build() agent and then initialize by calling init() function first.")
+            raise RuntimeError(
+                "Before step you need to build() agent and then initialize by calling init() function first.")
 
         if self.sim is None:
             raise RuntimeError("Before step you need to initialize the Agent by calling init() function first.")
@@ -194,6 +214,8 @@ class Agent:
         output = self._get_output(output_type)
         if sort_func:
             output = sorted(output, key=sort_func)
+        if epsilon is not None and epsilon > 0:
+            output = self._select_best_output(output=output, epsilon=epsilon)
         return output
 
     def reward_step(self, reward, stepsize=None):
@@ -209,7 +231,8 @@ class Agent:
         if not self._agent_builded:
             raise RuntimeError("Before making reward you need to build the Agent by calling build() function first.")
         if self.sim is None:
-            raise RuntimeError("Before making reward you need to initialize the Agent by calling init() function first.")
+            raise RuntimeError(
+                "Before making reward you need to initialize the Agent by calling init() function first.")
 
         if reward > 0:
             for s in self.reward_syns:
@@ -233,7 +256,8 @@ class Agent:
 
     def pad_2d_observation(self, obs):
         if self.x_kernel is None or self.y_kernel is None:
-            raise RuntimeError("Before calling pad_observation() you need to build the Agent by calling build() function first.")
+            raise RuntimeError(
+                "Before calling pad_observation() you need to build the Agent by calling build() function first.")
         return np.pad(obs, (self.x_kernel.padding, self.y_kernel.padding), 'constant', constant_values=(0, 0))
 
     @staticmethod
@@ -300,17 +324,19 @@ class Agent:
         """
         obs = self.pad_2d_observation(obs)
         if self.input_size != obs.size:
-            raise RuntimeError("Observation must be of same size as self.input_size, which is a product of input_shape.")
+            raise RuntimeError(
+                "Observation must be of same size as self.input_size, which is a product of input_shape.")
 
         cell_i = 0
-        for y in range(0, self.input_shape[0], self.y_kernel.stride):
-            for x in range(0, self.input_shape[1], self.x_kernel.stride):
+        for y in range(0, self.input_shape[0] - self.y_kernel.size, self.y_kernel.stride):
+            for x in range(0, self.input_shape[1] - self.x_kernel.size, self.x_kernel.stride):
 
                 current_cell = self.input_cells[cell_i]
                 window = obs[y:y + self.y_kernel.size, x:x + self.x_kernel.size]
 
                 if np.sum(window) > 0:
-                    self._make_single_observation(observation=window.flatten(), syns=current_cell.syns, poisson=poisson, stepsize=stepsize)
+                    self._make_single_observation(observation=window.flatten(), syns=current_cell.syns, poisson=poisson,
+                                                  stepsize=stepsize)
                 cell_i += 1
 
     def _make_1d_observation(self, obs, poisson=False, stepsize=None):
@@ -322,7 +348,8 @@ class Agent:
         :return:
         """
         if self.input_size != obs.size:
-            raise RuntimeError("Observation must be of same size as self.input_size, which is a product of input_shape.")
+            raise RuntimeError(
+                "Observation must be of same size as self.input_size, which is a product of input_shape.")
 
         input_syns = [s for c in self.input_cells for s in c.syns]
         self._make_single_observation(observation=obs, syns=input_syns, poisson=poisson, stepsize=stepsize)
@@ -390,8 +417,9 @@ class Agent:
             if oc._spike_detector is None:
                 soma = oc.filter_secs("soma")
                 if isinstance(soma, list):
-                    raise LookupError("Output cells need to setup spike detector or at least have a single 'soma' section"
-                                      "so that spike detection can be implemented automatically.")
+                    raise LookupError(
+                        "Output cells need to setup spike detector or at least have a single 'soma' section"
+                        "so that spike detection can be implemented automatically.")
 
                 oc.make_spike_detector(soma(0.5))
 

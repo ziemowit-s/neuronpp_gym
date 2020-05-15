@@ -1,12 +1,11 @@
 import numpy as np
-
 from neuronpp.utils.record import Record
+
 from agents.agent import Agent
 from populations.Exp2SynPopulation import Exp2SynPopulation
-from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from populations.ebner_neuromodulatory_population import EbnerNeuromodulatoryPopulation
 
-#WEIGHT = 0.0035  # From Ebner et al. 2019
+# WEIGHT = 0.0035  # From Ebner et al. 2019
 
 class EbnerAgent(Agent):
     def __init__(self, output_cell_num, input_max_hz, netcon_weight=0.01, default_stepsize=20, ach_tau=50, da_tau=50):
@@ -21,7 +20,8 @@ class EbnerAgent(Agent):
         self.da_tau = da_tau
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
-        input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
+        # info input_syn_per_cell should cover the whole input of a kernel (at least)
+        input_syn_per_cell = self.x_kernel.size * self.y_kernel.size
         input_pop = Exp2SynPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
         input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=self.netcon_weight, rule='one')

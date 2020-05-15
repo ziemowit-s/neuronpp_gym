@@ -21,12 +21,12 @@ class Sigma3Agent(Agent):
         super().__init__(output_cell_num=output_cell_num, input_max_hz=input_max_hz, default_stepsize=default_stepsize)
 
     def _build_network(self, input_cell_num, input_size, output_cell_num):
-
         # INPUTS
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
         input_pop = Exp2SynPopulation("inp_0")
         input_pop.create(input_cell_num)
-        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=self.netcon_weight, rule='one')
+        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=self.netcon_weight,
+                          rule='one')
 
         # OUTPUTS
         output_pop = self._make_modulatory_population("out_1", cell_num=output_cell_num, source=input_pop)

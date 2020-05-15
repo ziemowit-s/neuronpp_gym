@@ -57,7 +57,7 @@ INITIAL{
 
 PROCEDURE rates(){
 	UNITSOFF
-        if((v == -27) ){        
+        if(v == -27){
             v = v+0.0001
         }
 		mAlpha =  (0.055*(-27-v))/(exp((-27-v)/3.8) - 1)        

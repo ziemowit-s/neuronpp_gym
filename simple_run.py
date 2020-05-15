@@ -6,6 +6,7 @@ from neuronpp.utils.record import Record
 
 from agents.ebner_agent import EbnerAgent
 from agents.sigma3_agent import Sigma3Agent
+from neuronpp.utils.graphs.spikes_heatmap_graph import SpikesHeatmapGraph
 
 
 def make_image():
