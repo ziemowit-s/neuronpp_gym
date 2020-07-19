@@ -6,7 +6,7 @@ Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
 
 * Install requirements.txt
 
-* Install NEURON from the instruction: https://github.com/ziemowit-s/neuron_netpyne_get_started
+* Install NEURON from the instruction: https://github.com/ziemowit-s/neuron_get_started
 
 * Install OpenAI Gym Atari environments
     ```bash
