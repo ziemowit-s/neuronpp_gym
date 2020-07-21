@@ -1,13 +1,15 @@
 import time
+
 import numpy as np
 
-from core.agent_core import Kernel
 from agents.agent2d import Agent2D
-from neuronpp.cells.ebner2019_cell import Ebner2019Cell
-from utils import get_env, prepare_pong_observation, reset
-from neuronpp.core.populations.population import Population
-from neuronpp.core.distributions import UniformTruncatedDist
+from core.agent_core import Kernel
 from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
+from neuronpp.cells.ebner2019_cell import Ebner2019Cell
+from neuronpp.core.distributions import UniformTruncatedDist
+from neuronpp.core.populations.population import Population
+from neuronpp.utils.graphs.spikes_heatmap_graph import SpikesHeatmapGraph
+from utils import get_env, prepare_pong_observation, reset
 
 SCREEN_RATIO = 0.15
 AGENT_STEP_AFTER = 10  # env steps
@@ -51,13 +53,16 @@ def make_network(input_size, input_cell_num):
     con = out.connect(syn_num_per_cell_source=1, cell_connection_proba=0.1)
     con.set_source([c.filter_secs("soma")(0.5) for c in inp.cells])
     con.set_target(out.cells)
-    con.add_synapse("Syn4PAChDa").add_netcon(weight=UniformTruncatedDist(low=0.01, high=0.1))
-    con.add_synapse("SynACh").add_netcon(weight=0.1)
-    con.add_synapse("SynDa").add_netcon(weight=0.1)
+    con.add_synapse("Syn4PAChDa").add_netcon(weight=UniformTruncatedDist(low=0.01, high=0.1))\
+        .add_point_process_params(ACh_tau=50, Da_tau=50)
+    con.add_synapse("SynACh").add_netcon(weight=0.3)
+    con.add_synapse("SynDa").add_netcon(weight=1.0)
     con.set_synaptic_function(func=lambda syns: Ebner2019AChDACell.set_synaptic_pointers(*syns))
     con.group_synapses()
     con.build()
-    return inp, out
+    reward = [s['SynACh'][0] for s in out.syns]
+    punish = [s['SynDa'][0] for s in out.syns]
+    return inp, out, reward, punish
 
 
 def make_action(move):
@@ -72,19 +77,20 @@ def make_action(move):
 if __name__ == '__main__':
     env, input_shape = get_env('Pong-v0', ratio=SCREEN_RATIO)
 
-    agent = Agent2D(input_max_hz=50, default_stepsize=AGENT_STEPSIZE)
+    agent = Agent2D(input_max_hz=100, default_stepsize=AGENT_STEPSIZE)
     agent.build(input_shape=input_shape,
                 x_kernel=Kernel(size=3, padding=0, stride=3),  # 18
                 y_kernel=Kernel(size=4, padding=0, stride=4))  # 24
 
-    inp_pop, out_pop = make_network(input_size=agent.input_size,
-                                    input_cell_num=agent.input_cell_num)
+    inp_pop, out_pop, reward_syns, punish_syns = make_network(input_size=agent.input_size,
+                                                              input_cell_num=agent.input_cell_num)
 
-    agent.init(init_v=-70, warmup=20, dt=0.2, input_cells=inp_pop.cells, output_cells=out_pop.cells)
+    agent.init(init_v=-70, warmup=20, dt=0.2, input_cells=inp_pop.cells, output_cells=out_pop.cells,
+               reward_syns=reward_syns, punish_syns=punish_syns)
     print("Input neurons:", agent.input_cell_num)
 
     # Create heatmap graph for input cells
-    #hitmap_graph = SpikesHeatmapGraph(name="Input Cells", cells=agent.input_cells, shape=(6, 6))
+    hitmap_graph = SpikesHeatmapGraph(name="Input Cells", cells=agent.input_cells, shape=(6, 6))
 
     move = -1
     last_agent_steptime = 0
@@ -112,7 +118,7 @@ if __name__ == '__main__':
                                  poisson=False)
 
             # Update graphs
-            #hitmap_graph.plot()
+            hitmap_graph.plot()
 
             # Update output text
             if (outputs[0].value - outputs[1].value) >= 1:
@@ -127,5 +133,5 @@ if __name__ == '__main__':
             agent.reward_step(reward=reward, stepsize=10)
 
         # make visuatization of mV on each cells by layers
-        #agent.rec_input.plot(animate=True, position=(6, 6))
-        #agent.rec_output.plot(animate=True)
+        # agent.rec_input.plot(animate=True, position=(6, 6))
+        # agent.rec_output.plot(animate=True)
