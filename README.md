@@ -6,7 +6,7 @@ Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
 
 * Install requirements.txt
 
-* Install NEURON from the instruction: https://github.com/ziemowit-s/neuron_netpyne_get_started
+* Install NEURON from the instruction: https://github.com/ziemowit-s/neuron_get_started
 
 * Install OpenAI Gym Atari environments
     ```bash
@@ -17,6 +17,10 @@ Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
 
 * pong_gym_run.py
 * mnist_run.py
+
+### Example Usage
+![PONG](pong_example.gif) 
+Example of Atari PONG game (left) and visual receptive fields inputs (right) to pixels' changes
     
 ### Known issues:
 
