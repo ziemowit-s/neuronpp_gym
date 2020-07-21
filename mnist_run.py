@@ -4,10 +4,9 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-from agents.agent import Kernel
+from core.agent_core import Kernel
 from agents.ebner_agent import EbnerAgent
 from neuronpp.utils.graphs.heatmap_graph import HeatmapGraph
-from neuronpp.utils.graphs.spikes_heatmap_graph import SpikesHeatmapGraph
 
 
 def mnist_prepare(num=10):

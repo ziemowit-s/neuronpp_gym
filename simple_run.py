@@ -1,40 +1,84 @@
 import queue
 import time
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+from neuronpp.cells.cell import Cell
+from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
+from neuronpp.core.distributions import NormalTruncatedDist
+from neuronpp.core.populations.population import Population
 from neuronpp.utils.record import Record
 
-from agents.ebner_agent import EbnerAgent
-from agents.sigma3_agent import Sigma3Agent
+from agents.agent1d import Agent1D
 
 
-def make_image():
+def get_img_plot():
     fig, ax = plt.subplots(1, 1)
     data = np.ones([2, 1], dtype=float)
     obj = ax.imshow(data, cmap=plt.get_cmap('gray'), vmin=0, vmax=1)
     return obj, ax
 
 
-AGENT_STEPSIZE = 60  # in ms - how long agent will look on a single mnist image
-EPSILON_OUTPUT = 1  # Min epsilon difference between 2 the best output and the next one to decide if agent answered (otherwise answer: -1)
+AGENT_STEPSIZE = 60  # in ms - how long agent will look on a single observation
+EPSILON_OUTPUT = 1  # Min epsilon difference between outputs to decide that agent made decision
 MAX_AVG_SIZE = 50  # Max size of average window to count accuracy
 
-# Create Agent
-agent = EbnerAgent(output_cell_num=2, input_max_hz=50, netcon_weight=0.01, default_stepsize=AGENT_STEPSIZE)
-agent.build(input_shape=2)
 
-# Get output synapses
-syns0 = [s for s in agent.output_cells[0].syns if "synach" not in s.name.lower() and "synda" not in s.name.lower()]
-syns1 = [s for s in agent.output_cells[1].syns if "synach" not in s.name.lower() and "synda" not in s.name.lower()]
-# Record output synapses
-syn_rec = Record(elements=syns0 + syns1, variables="ACh Da")
+def input_cell_template():
+    cell = Cell("cell")
+    cell.add_sec("soma", diam=20, l=20, nseg=10)
+    cell.add_sec("apic", diam=2, l=50, nseg=100)
+    cell.connect_secs(child="apic", parent="soma", child_loc=0, parent_loc=1)
+    cell.insert('pas')
+    cell.insert('hh')
+    return cell
 
-# Init Agent
+
+def output_cell_template():
+    cell = Ebner2019AChDACell("ebner", compile_paths="agents/commons/mods/ebner2019 "
+                                                     "agents/commons/mods/4p_ach_da_syns")
+
+    cell.add_sec("soma", diam=20, l=20, nseg=10)
+    cell.add_sec("apic", diam=2, l=50, nseg=100)
+    cell.connect_secs(child="apic", parent="soma", child_loc=0, parent_loc=1)
+    cell.make_default_mechanisms()
+    return cell
+
+
+# Create network
+input_pop = Population("input")
+input_pop.add_cells(num=2, cell_function=input_cell_template)
+
+output_pop = Population("output")
+output_pop.add_cells(num=2, cell_function=output_cell_template)
+
+connector = output_pop.connect(rule="all", cell_connection_proba=0.5)
+connector.set_source([c.filter_secs("soma")(0.5) for c in input_pop.cells])
+connector.set_target([c.filter_secs("soma")(0.5) for c in output_pop.cells])
+
+syn_adder = connector.add_synapse("Syn4PAChDa").add_netcon(weight=0.01)
+syn_adder.add_point_process_params(w_pre_init=NormalTruncatedDist(mean=0.5, std=1 / 8),
+                                   w_post_init=NormalTruncatedDist(mean=2, std=1 / 8),
+                                   ACh_tau=1, Da_tau=1)
+
+connector.add_synapse("SynACh").add_netcon(weight=1)
+syn_adder = connector.add_synapse("SynDa").add_netcon(weight=1)
+connector.group_synapses()
+
+
+def set_pointer(syns):
+    Ebner2019AChDACell.set_synaptic_pointers(syns[0], syns[1], syns[2])
+
+
+connector.set_synaptic_function(func=set_pointer)
+connector.build()
+
+agent = Agent1D(input_max_hz=50, default_stepsize=AGENT_STEPSIZE)
+agent.build(input_cells=input_pop.cells, output_cells=output_pop.cells)
 agent.init(init_v=-70, warmup=100, dt=0.1)
-print("Input neurons:", agent.input_cell_num)
 
 # Show and update mnist image
-imshow_obj, ax = make_image()
+imshow_obj, ax = get_img_plot()
 
 # Run training
 index = 0
@@ -60,19 +104,18 @@ while True:
 
     # Make step and get agent predictions
     predicted = -1
-    outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value, poisson=True)
+    outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value,
+                         poisson=True)
 
-    # Print Agent's output and output cell synapses
-    syns0_w = [round(s.hoc.w, 4) for s in syns0]
-    syns1_w = [round(s.hoc.w, 4) for s in syns1]
-    print('output:', ",".join(["%s:%s" % (o.index, o.value) for o in outputs]), "// cell_0:", syns0_w, "cell_1:", syns1_w)
-
-    if outputs[0].value != -1 and (outputs[1].value == -1 or (outputs[0].value - outputs[1].value) >= EPSILON_OUTPUT):
+    if outputs[0].value != -1 and \
+            (outputs[1].value == -1 or (outputs[0].value - outputs[1].value) >= EPSILON_OUTPUT):
         predicted = outputs[0].index
 
-    # Make reward
+    # Clear average accuracy fifo
     if avg_acc_fifo.qsize() == MAX_AVG_SIZE:
         avg_acc_fifo.get()
+
+    # Make reward
     if predicted == y:
         avg_acc_fifo.put(1)
         reward = 1
@@ -88,11 +131,6 @@ while True:
     avg_accuracy = round(np.average(list(avg_acc_fifo.queue)), 2)
     ax.set_title('Predicted: %s True: %s, AVG_ACC: %s' % (predicted, y, avg_accuracy))
 
-    # Update synapse plot
-    syn_rec.plot(animate=True, position="merge")
-    plt.draw()
-    plt.pause(1e-9)
-
     # Make reward step
     agent.reward_step(reward=reward, stepsize=50)
 
@@ -101,7 +139,3 @@ while True:
 
     # increment mnist image index
     index += 1
-
-    # make visuatization of mV on each cells by layers
-    #agent.rec_input.plot(animate=True)
-    agent.rec_output.plot(animate=True)

@@ -1,9 +1,8 @@
 import numpy as np
 
 from neuronpp.utils.record import Record
-from agents.agent import Agent
+from core.agent_core import Agent
 from populations.Exp2SynPopulation import Exp2SynPopulation
-from populations.ebner_hebbian_population import EbnerHebbianPopulation
 from populations.ebner_neuromodulatory_population import EbnerNeuromodulatoryPopulation
 
 #WEIGHT = 0.0035  # From Ebner et al. 2019
@@ -24,7 +23,7 @@ class EbnerAgent(Agent):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
         input_pop = Exp2SynPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
-        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=self.netcon_weight, rule='one')
+        input_pop.connect(source=None, syn_num_per_cell_source=input_syn_per_cell, delay=1, netcon_weight=self.netcon_weight, rule='one')
 
         output_pop = self._make_modulatory_population("out_1", cell_num=output_cell_num, source=input_pop)
         #output_pop = EbnerHebbianPopulation("out_1")

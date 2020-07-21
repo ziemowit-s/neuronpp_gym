@@ -10,7 +10,7 @@ class Sigma3HebbianPopulation(Population):
         cell = Cell(name, compile_paths="agents/commons/mods/sigma3syn")
         cell.add_sec("soma", diam=20, l=20, nseg=10)
         cell.add_sec("apic", diam=2, l=50, nseg=100)
-        cell.connect_secs(source="apic", target="soma", source_loc=0, target_loc=1)
+        cell.connect_secs(child="apic", parent="soma", child_loc=0, parent_loc=1)
         cell.insert('pas')
         cell.insert('hh')
         return cell

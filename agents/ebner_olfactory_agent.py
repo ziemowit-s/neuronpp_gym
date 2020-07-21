@@ -1,13 +1,9 @@
 import numpy as np
 
 from neuronpp.cells.cell import Cell
-from neuronpp.utils.record import Record
 
-from agents.agent import Agent
 from agents.ebner_agent import EbnerAgent
 from populations.ebner_hebbian_population import EbnerHebbianPopulation
-from populations.ebner_neuromodulatory_population import EbnerNeuromodulatoryPopulation
-
 
 WEIGHT = 0.0035  # From Ebner et al. 2019
 
@@ -28,7 +24,7 @@ class EbnerOlfactoryAgent(EbnerAgent):
         input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
         input_pop = EbnerHebbianPopulation("inp_0")
         input_pop.create(cell_num=input_cell_num)
-        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell, delay=1, netcon_weight=WEIGHT, rule='one')
+        input_pop.connect(source=None, syn_num_per_cell_source=input_syn_per_cell, delay=1, netcon_weight=WEIGHT, rule='one')
 
         # HIDDEN
         self.hidden_pop = self._make_modulatory_population("hid_1", cell_num=12, source=input_pop)

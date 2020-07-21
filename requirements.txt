@@ -8,4 +8,4 @@ wheel
 scikit-image
 gym
 gym[atari]
-git+https://github.com/ziemowit-s/neuronpp
+opencv-python

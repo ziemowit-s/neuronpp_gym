@@ -3,7 +3,7 @@ import numpy as np
 from neuronpp.cells.cell import Cell
 from neuronpp.utils.record import Record
 
-from agents.agent import Agent
+from core.agent_core import Agent
 from populations.sigma3_hebbian_population import Sigma3HebbianPopulation
 from populations.sigma3_neuromodulatory_population import Sigma3NeuromodulatoryPopulation
 
@@ -25,7 +25,7 @@ class Sigma3OlfactoryAgent(Agent):
         # INPUTS
         input_pop = Sigma3HebbianPopulation("inp_0")
         input_pop.create(input_cell_num)
-        input_pop.connect(source=None, syn_num_per_source=input_syn_per_cell,
+        input_pop.connect(source=None, syn_num_per_cell_source=input_syn_per_cell,
                           delay=1, netcon_weight=0.1, rule='one')
         # HIDDEN
         self.hidden_pop = self._make_modulatory_population("hid_2", cell_num=12, source=input_pop)
@@ -44,7 +44,7 @@ class Sigma3OlfactoryAgent(Agent):
     def _make_modulatory_population(self, name, cell_num, source=None):
         pop = Sigma3NeuromodulatoryPopulation(name)
         pop.create(cell_num)
-        syns = pop.connect(source=source, syn_num_per_source=1,
+        syns = pop.connect(source=source, syn_num_per_cell_source=1,
                            delay=1, neuromodulatory_weight=1,
                            random_weight_mean=1.0, netcon_weight=0.01, rule='all')
         # Prepare synapses for reward and punish
