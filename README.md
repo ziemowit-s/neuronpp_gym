@@ -16,7 +16,6 @@ Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
 ## Run
 
 * pong_gym_run.py
-* mnist_run.py
 
 ### Example Usage
 ![PONG](pong_example.gif) 
