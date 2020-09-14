@@ -8,8 +8,8 @@ project/.DS_Store
 /ca2_diffusion/x86_64/
 x86_64/
 */*/x86_64/
-agents/commons/mods/*/x86_64/
-agents/commons/mods/x86_64/
+neuronpp_gym/agents/commons/mods/*/x86_64/
+neuronpp_gym/agents/commons/mods/x86_64/
 compiled/
 conectivity_graph.html
 

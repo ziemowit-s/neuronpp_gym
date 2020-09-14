@@ -1,7 +1,6 @@
 import cv2
 import gym
 import numpy as np
-import matplotlib.pyplot as plt
 
 # PONG PARAMS
 # ACTIONS:
@@ -26,6 +25,15 @@ import matplotlib.pyplot as plt
 # done TRUE if >20 points
 
 
+def make_action(move):
+    if move == 0:  # UP
+        return 2
+    elif move == 1:  # DOWN
+        return 3
+    else:  # NONE
+        return 0
+
+
 def show_cv2(obs):
     if "int" in str(obs.dtype):
         obs = np.array(obs, dtype=float)
@@ -35,7 +43,7 @@ def show_cv2(obs):
         raise GeneratorExit("OpenCV image show stopped.")
 
 
-def prepare_pong_observation(obs, ratio, show=False):
+def prepare_pong_observation(obs, ratio, show=False, flatten=False):
     """
     :param obs:
     :param ratio:
@@ -91,18 +99,21 @@ def prepare_pong_observation(obs, ratio, show=False):
         #plt.show()
 
     #obs = np.reshape(obs, [obs.shape[0] * obs.shape[1]])  # flatten
+    if flatten:
+        obs = obs.flatten()
     return obs
 
 
-def reset(env, ratio):
+def reset(env, ratio, prepare_obs=True):
     env.reset()
     # Warmup evironment (required for 2 paddles to appear on the screen)
     obs = None
     for _ in range(21):
         obs, *_ = env.step(0)
-    obs = prepare_pong_observation(obs, ratio)
+    if prepare_obs:
+        obs = prepare_pong_observation(obs, ratio)
 
-    return obs.shape
+    return obs
 
 
 def get_env(name, ratio):

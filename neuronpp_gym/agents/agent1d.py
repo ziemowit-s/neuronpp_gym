@@ -1,8 +1,4 @@
-from typing import List
-
-from neuronpp.cells.cell import Cell
-
-from core.agent_core import AgentCore
+from neuronpp_gym.core.agent_core import AgentCore
 
 
 class Agent1D(AgentCore):

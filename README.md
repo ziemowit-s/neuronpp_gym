@@ -18,7 +18,7 @@ Spiking Neural Gym agent created on top of NEURON++ and OpenAI Gym libraries
 * pong_gym_run.py
 
 ### Example Usage
-![PONG](pong_example.gif) 
+![PONG](images/pong_example.gif) 
 Example of Atari PONG game (left) and visual receptive fields inputs (right) to pixels' changes
     
 ### Known issues:

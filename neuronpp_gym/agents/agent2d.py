@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Tuple
 
-from core.agent_core import AgentCore, Kernel
+from neuronpp_gym.core.agent_core import AgentCore, Kernel
 
 
 class Agent2D(AgentCore):
