@@ -34,21 +34,36 @@ def make_ebner_network(input_size, input_cell_num):
     con.set_target(inp.cells)
     con.add_synapse("Syn4P").add_netcon(weight=UniformTruncatedDist(low=0.01, high=0.1))
     con.build()
-
-    out = Population(name="output")
-    out.add_cells(num=2, cell_function=cell_ebner_ach_da)
-    con = out.connect(syn_num_per_cell_source=1, cell_connection_proba=0.1)
+    
+    hid = Population(name="hid")
+    hid.add_cells(num=4, cell_function=cell_ebner_ach_da)
+    con = hid.connect(syn_num_per_cell_source=1, cell_connection_proba=0.5)
     con.set_source([c.filter_secs("soma")(0.5) for c in inp.cells])
-    con.set_target(out.cells)
+    con.set_target(hid.cells)
     con.add_synapse("Syn4PAChDa").add_netcon(weight=UniformTruncatedDist(low=0.01, high=0.1)) \
-        .add_point_process_params(ACh_tau=50, Da_tau=50)
+        .add_point_process_params(ACh_tau=50, Da_tau=100, A_Da=1e-35, A_ACh=1e-35)
     con.add_synapse("SynACh").add_netcon(weight=0.3)
     con.add_synapse("SynDa").add_netcon(weight=1.0)
     con.set_synaptic_function(func=lambda syns: Ebner2019AChDACell.set_synaptic_pointers(*syns))
     con.group_synapses()
     con.build()
-    reward = [s['SynACh'][0] for s in out.syns]
-    punish = [s['SynDa'][0] for s in out.syns]
+    reward = [s['SynACh'][0] for s in hid.syns]
+    punish = [s['SynDa'][0] for s in hid.syns]
+    
+    out = Population(name="output")
+    out.add_cells(num=2, cell_function=cell_ebner_ach_da)
+    con = out.connect(syn_num_per_cell_source=1, cell_connection_proba=1)
+    con.set_source([c.filter_secs("soma")(0.5) for c in hid.cells])
+    con.set_target(out.cells)
+    con.add_synapse("Syn4PAChDa").add_netcon(weight=UniformTruncatedDist(low=0.01, high=0.1)) \
+        .add_point_process_params(ACh_tau=50, Da_tau=100, A_Da=1e-3, A_ACh=1e-3)
+    con.add_synapse("SynACh").add_netcon(weight=0.3)
+    con.add_synapse("SynDa").add_netcon(weight=1.0)
+    con.set_synaptic_function(func=lambda syns: Ebner2019AChDACell.set_synaptic_pointers(*syns))
+    con.group_synapses()
+    con.build()
+    reward += [s['SynACh'][0] for s in out.syns]
+    punish += [s['SynDa'][0] for s in out.syns]
     return inp, out, reward, punish
 
 
