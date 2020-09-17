@@ -3,7 +3,7 @@ import time
 from neuronpp_gym.agents.agent2d import Agent2D
 from neuronpp_gym.agents.utils import make_ebner_network
 from neuronpp_gym.core.agent_core import Kernel
-from neuronpp_gym.utils import get_env, prepare_pong_observation, reset, make_action
+from neuronpp_gym.utils import get_env, prepare_pong_observation, reset, get_env_action_number
 from neuronpp.utils.graphs.spikes_heatmap_graph import SpikesHeatmapGraph
 
 SCREEN_RATIO = 0.15
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     while True:
         env.render()
 
-        action = make_action(move)
+        action = get_env_action_number(move)
         env_step += 1
         obs, reward, done, info = env.step(action)
         obs = prepare_pong_observation(obs, ratio=SCREEN_RATIO, show=True)

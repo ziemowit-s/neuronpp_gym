@@ -2,6 +2,11 @@ import cv2
 import gym
 import numpy as np
 
+from neuronpp.cells.cell import Cell
+from neuronpp.core.distributions import UniformDist
+from neuronpp.utils.iclamp import IClamp
+from neuronpp.utils.record import Record
+
 # PONG PARAMS
 # ACTIONS:
 # 0 NOOP - no action
@@ -25,7 +30,28 @@ import numpy as np
 # done TRUE if >20 points
 
 
-def make_action(move):
+def get_cell_with_iclamps_as_synapses(warmup, dur, name, input_size, low=0.08, high=0.1):
+    # Create cell
+    cell = Cell(name=name)
+    soma = cell.add_sec("soma", diam=10, l=10, nseg=5)
+    dend = cell.add_sec("dend", diam=5, l=100, nseg=50)
+    cell.connect_secs(child=dend, parent=soma)
+    cell.insert("hh")
+
+    # Make synapses
+    iclamp_syns = []
+    for i in range(input_size):
+        iclamp = IClamp(segment=dend(np.random.rand()))
+        syn = iclamp.stim(delay=warmup, dur=dur, amp=UniformDist(low=low, high=high))
+        iclamp_syns.append(syn)
+
+    # Make recording
+    rec = Record(elements=soma(0.5), variables='v')
+    cell.make_spike_detector(seg=soma(0.5))
+    return cell, iclamp_syns, rec
+
+
+def get_env_action_number(move):
     if move == 0:  # UP
         return 2
     elif move == 1:  # DOWN
