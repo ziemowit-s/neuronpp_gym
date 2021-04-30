@@ -16,7 +16,7 @@ STIM_MAX_HZ = 180
 
 TRAIN_NUM = 5000
 
-SCREEN_RATIO = 0.05
+SCREEN_RATIO = 0.1
 AGENT_STEP_AFTER = 2  # env steps
 AGENT_STEPSIZE = 40  # in ms
 
@@ -27,7 +27,7 @@ rewards = deque(maxlen=10)
 
 if __name__ == '__main__':
     # set random seed
-    #np.random.seed(31)
+    np.random.seed(31)
 
     env, obs = get_env('Pong-v0', ratio=SCREEN_RATIO)
     input_shape = obs.shape
