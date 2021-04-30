@@ -39,13 +39,13 @@ def step(obs, action, env_step):
     dist_prev = (max_ids[0] + max_ids[1]) / 8
     reward = 0
     try:
-        if action == 2: # UP
+        if action == 0: # UP
             obs[max_ids[0]-1, max_ids[1]] = 1
-        elif action == 0: # DOWN
+        elif action == 1: # DOWN
             obs[max_ids[0]+1, max_ids[1]] = 1
-        elif action == 1: # right
+        elif action == 2: # right
             obs[max_ids[0], max_ids[1]+1] = 1
-        elif action == 2: # left
+        elif action == 3: # left
             obs[max_ids[0], max_ids[1]-1] = 1
         else:
             obs[max_ids[0], max_ids[1]] = 1
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     print('input shape', input_shape)
 
     agent = Agent2DDaExternal(input_max_hz=100, default_stepsize=AGENT_STEPSIZE, tau=500,
-                              alpha=0.0001, der_avg_num=25)
+                              alpha=0.01, der_avg_num=25)
     agent.build(input_shape=input_shape,
                 x_kernel=Kernel(size=3, padding=0, stride=3),  # 18
                 y_kernel=Kernel(size=4, padding=0, stride=4))  # 24
