@@ -109,6 +109,9 @@ class Agent2DDaExternal(Agent2D):
 
         self._make_reinforcement()
 
+        self.last_step_size_ms = self.sim.t - self.last_step_ms
+        self.last_step_ms = self.sim.t
+
         out_vals = [o.value for o in output]
         action_index = np.argmax(out_vals)
         for i, a in enumerate(self.cell_actions):
@@ -141,9 +144,6 @@ class Agent2DDaExternal(Agent2D):
             # -1 to remove the last synapse which is external reinforcer
             #self._train(syns=self.reward_cell.syns[:-1], name="rew", reward=-1, alpha=self.alpha*0.1)
             #self._train(syns=self.punish_cell.syns[:-1], obs=observation, name="pun", reward=1, alpha=self.alpha*0.1)
-
-        self.last_step_size_ms = self.sim.t - self.last_step_ms
-        self.last_step_ms = self.sim.t
 
     def reward_step(self, reward, stepsize=None):
         """

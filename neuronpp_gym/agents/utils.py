@@ -24,21 +24,21 @@ def make_hh_network(input_size):
         syns = []
         for i in range(input_size):
             syn = cell.add_synapse(source=None, mod_name="ExpSyn", seg=apic(np.random.rand()),
-                                   netcon_weight=UniformTruncatedDist(low=0.0001, high=0.0002), e=0,
+                                   netcon_weight=0, e=0,
                                    tau=1)
             syns.append(syn)
         return cell, syns
 
     input_syn_per_cell = input_size
     inp_cells = []
-    for i in range(3):
+    for i in range(4):
         cell = hh_cell(name=i)
         inp_cells.append(cell)
 
         apic = cell.filter_secs("apic")
         for _ in range(input_syn_per_cell):
             cell.add_synapse(source=None, mod_name="ExpSyn", seg=apic(np.random.rand()),
-                             netcon_weight=UniformTruncatedDist(low=0.01, high=0.02),
+                             netcon_weight=UniformTruncatedDist(low=0.001, high=0.002),
                              e=0, tau=1)
 
     reward_cell, reward_input_syns = rl_cell(input_size, name="reward")
