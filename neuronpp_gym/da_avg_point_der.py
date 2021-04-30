@@ -34,7 +34,7 @@ if __name__ == '__main__':
     print('input shape', input_shape)
 
     agent = Agent2DDaExternal(input_max_hz=100, default_stepsize=AGENT_STEPSIZE, tau=100,
-                              alpha=0.001, der_avg_num=30)
+                              alpha=0.0005, der_avg_num=30)
     agent.build(input_shape=input_shape,
                 x_kernel=Kernel(size=3, padding=0, stride=3),  # 18
                 y_kernel=Kernel(size=4, padding=0, stride=4))  # 24
