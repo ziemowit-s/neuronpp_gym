@@ -46,7 +46,7 @@ if __name__ == '__main__':
                reward_cell=reward_cell, punish_cell=punish_cell)
     print("Input neurons:", agent.input_cell_num)
 
-    syn_heatmap0 = HeatmapGraph(name="STILL", elements=inp_cells[0].syns, show_values=False, extract_func=lambda syn: syn.netcons[0].get_weight(), shape=input_shape, round_vals=6)
+    #syn_heatmap0 = HeatmapGraph(name="STILL", elements=inp_cells[0].syns, show_values=False, extract_func=lambda syn: syn.netcons[0].get_weight(), shape=input_shape, round_vals=6)
     #syn_heatmap1 = HeatmapGraph(name="UP", elements=inp_cells[1].syns, show_values=False, extract_func=lambda syn: syn.netcons[0].get_weight(), shape=input_shape, round_vals=6)
     #syn_heatmap2 = HeatmapGraph(name="DOWN", elements=inp_cells[2].syns, show_values=False, extract_func=lambda syn: syn.netcons[0].get_weight(), shape=input_shape, round_vals=6)
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
             outputs = agent.step(observation=obs, output_type="rate", poisson=False)
 
             # Update graphs
-            syn_heatmap0.plot()
+            #syn_heatmap0.plot()
             #syn_heatmap1.plot()
             #syn_heatmap2.plot()
 

@@ -209,8 +209,11 @@ class Agent2DDaExternal(Agent2D):
         reward = -reward
         for i, (s, o) in enumerate(zip(syns, obs.flatten())):
             weight = s.netcons[0].get_weight()
+            # weight_func remove last 2 derivative where ball is out of observation which lower
+            # voltage for the cell and tricks derivative
             soma_v_dir_g = self.derivatives.get_der(y_name=f'{name}_v', x_name=f"{name}_g{i}",
-                                                    dur=self.last_step_size_ms)
+                                                    dur=self.last_step_size_ms,
+                                                    weight_func=lambda ders: ders[:-2])
             new_weight = reward * soma_v_dir_g * self.alpha
             if action_weight is not None:
                 new_weight *= action_weight
