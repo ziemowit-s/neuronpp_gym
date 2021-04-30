@@ -27,28 +27,28 @@ rewards = deque(maxlen=10)
 
 if __name__ == '__main__':
     # set random seed
-    np.random.seed(31)
+    #np.random.seed(31)
 
     env, obs = get_env('Pong-v0', ratio=SCREEN_RATIO)
     input_shape = obs.shape
     print('input shape', input_shape)
 
-    agent = Agent2DDaExternal(input_max_hz=100, default_stepsize=AGENT_STEPSIZE, tau=10000,
+    agent = Agent2DDaExternal(input_max_hz=100, default_stepsize=AGENT_STEPSIZE, tau=100,
                               alpha=0.001, der_avg_num=30)
     agent.build(input_shape=input_shape,
                 x_kernel=Kernel(size=3, padding=0, stride=3),  # 18
                 y_kernel=Kernel(size=4, padding=0, stride=4))  # 24
 
-    inp_pop, reward_cell, punish_cell, reward_input_syns, punish_input_syns = \
-        make_hh_network(input_size=agent.input_size, input_cell_num=agent.input_cell_num)
+    inp_cells, reward_cell, punish_cell, reward_input_syns, punish_input_syns = \
+        make_hh_network(input_size=agent.input_size)
 
-    agent.init(init_v=-70, warmup=20, dt=1, input_cells=inp_pop.cells, output_cells=inp_pop.cells,
+    agent.init(init_v=-70, warmup=20, dt=1, input_cells=inp_cells, output_cells=inp_cells,
                reward_cell=reward_cell, punish_cell=punish_cell)
     print("Input neurons:", agent.input_cell_num)
 
-    syn_heatmap = HeatmapGraph(name="syns", elements=agent.input_cells[0].syns, show_values=True,
-                               extract_func=lambda syn: syn.netcons[0].get_weight(),
-                               shape=input_shape, round_vals=6)
+    syn_heatmap0 = HeatmapGraph(name="STILL", elements=inp_cells[0].syns, show_values=False, extract_func=lambda syn: syn.netcons[0].get_weight(), shape=input_shape, round_vals=6)
+    #syn_heatmap1 = HeatmapGraph(name="UP", elements=inp_cells[1].syns, show_values=False, extract_func=lambda syn: syn.netcons[0].get_weight(), shape=input_shape, round_vals=6)
+    #syn_heatmap2 = HeatmapGraph(name="DOWN", elements=inp_cells[2].syns, show_values=False, extract_func=lambda syn: syn.netcons[0].get_weight(), shape=input_shape, round_vals=6)
 
     move = -1
     last_agent_steptime = 0
@@ -73,23 +73,23 @@ if __name__ == '__main__':
         # Make observation
         move = -1
         if env_step % AGENT_STEP_AFTER == 0:
-            outputs = agent.step(observation=obs, output_type="rate", sort_func=lambda x: -x.value,
-                                 poisson=False)
+            outputs = agent.step(observation=obs, output_type="rate", poisson=False)
 
             # Update graphs
-            syn_heatmap.plot()
+            syn_heatmap0.plot()
+            #syn_heatmap1.plot()
+            #syn_heatmap2.plot()
 
-            # Update output text
-            if outputs[0].value >= 2:
-                move = 1
-            elif outputs[0].value == 1:
-                move = 0
+            # moves from: -1 to 1
+            move_vals = [o.value for o in outputs]
+            move = np.argmax([o.value for o in outputs])-1
 
             # write time after agent step
             last_agent_steptime = time.time()
 
         if reward != 0:
-            print('reward:', reward, 'avg_reward:', round(np.average(rewards),2))
+            print('reward:', reward, 'avg_reward:', round(np.average(rewards),2),
+                  'move_vals', move_vals)
             agent.reward_step(reward=reward, stepsize=10)
 
         # make visuatization of mV on each cells by layers
