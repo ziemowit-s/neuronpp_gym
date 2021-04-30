@@ -1,4 +1,5 @@
 from collections import deque
+from time import time
 from typing import List, Tuple
 
 import numpy as np
@@ -19,6 +20,7 @@ class Agent2DDaExternal(Agent2D):
         self.tau = tau
         self.alpha = alpha
         self.der_avg_num = der_avg_num
+        self.external_reinforcer = False
 
     def reset(self):
         self.sim.reinit()
@@ -105,24 +107,7 @@ class Agent2DDaExternal(Agent2D):
         self._save_der(rec_gs=self.recs_rew_gs, rec_v=self.rec_v_rew, name="rew")
         self._save_der(rec_gs=self.recs_pun_gs, rec_v=self.rec_v_pun, name="pun")
 
-        reward_spikes = self.reward_cell.spikes()
-        reward_spikes = reward_spikes[reward_spikes > self.last_step_ms]
-
-        for _ in reward_spikes:
-            self._train_input(reward=1, observation=observation)
-            self._train(syns=self.reward_syns, obs=observation, name="rew", reward=1)
-            self._train(syns=self.punish_syns, obs=observation, name="pun", reward=-1)
-
-        punish_spikes = self.punish_cell.spikes()
-        punish_spikes = punish_spikes[punish_spikes > self.last_step_ms]
-
-        for _ in punish_spikes:
-            self._train_input(reward=-1, observation=observation)
-            self._train(syns=self.reward_syns, obs=observation, name="rew", reward=-1)
-            self._train(syns=self.punish_syns, obs=observation, name="pun", reward=1)
-
-        self.last_step_size_ms = self.sim.t - self.last_step_ms
-        self.last_step_ms = self.sim.t
+        self._make_reinforcement()
 
         out_vals = [o.value for o in output]
         action_index = np.argmax(out_vals)
@@ -131,7 +116,46 @@ class Agent2DDaExternal(Agent2D):
                 a.append(1)
             else:
                 a.append(0)
+        self.external_reinforcer = False
         return output
+
+    def _make_reinforcement(self):
+        reward_spikes = self.reward_cell.spikes()
+        reward_spikes = reward_spikes[reward_spikes > self.last_step_ms]
+
+        for _ in reward_spikes:
+            if not self.external_reinforcer:
+                print('internal REWARD', time())
+            self._train_input(reward=1)
+            # -1 to remove the last synapse which is external reinforcer
+            #self._train(syns=self.reward_cell.syns[:-1], name="rew", reward=1, alpha=self.alpha)
+            #self._train(syns=self.punish_cell.syns[:-1], obs=observation, name="pun", reward=-1, alpha=self.alpha*0.1)
+
+        punish_spikes = self.punish_cell.spikes()
+        punish_spikes = punish_spikes[punish_spikes > self.last_step_ms]
+
+        for _ in punish_spikes:
+            if not self.external_reinforcer:
+                print('internal PUNISH', time())
+            self._train_input(reward=-1)
+            # -1 to remove the last synapse which is external reinforcer
+            #self._train(syns=self.reward_cell.syns[:-1], name="rew", reward=-1, alpha=self.alpha*0.1)
+            #self._train(syns=self.punish_cell.syns[:-1], obs=observation, name="pun", reward=1, alpha=self.alpha*0.1)
+
+        self.last_step_size_ms = self.sim.t - self.last_step_ms
+        self.last_step_ms = self.sim.t
+
+    def reward_step(self, reward, stepsize=None):
+        """
+        It allows to sense the reward by the agent for stepsize time.
+
+        :param reward:
+            the value of the reward
+        :param stepsize:
+            in ms. If None - it will use self.default_stepsize.
+        """
+        self._make_reward(reward)
+        self._make_reinforcement()
 
     def prepare_input_cells(self, input_cells):
         self.rec_inps = []
@@ -181,9 +205,11 @@ class Agent2DDaExternal(Agent2D):
                                "init() function first.")
 
         if reward > 0:
+            self.external_reinforcer = True
             for s in self.reward_syns:
                 s.make_event(1)
         elif reward < 0:
+            self.external_reinforcer = True
             for s in self.punish_syns:
                 s.make_event(1)
 
@@ -195,31 +221,31 @@ class Agent2DDaExternal(Agent2D):
         self.derivatives.append(name=f'{name}_v', val=-np.average(
             rec_v.as_numpy().get_records_from_time(self.last_step_ms)))
 
-    def _train_input(self, reward, observation):
+    def _train_input(self, reward):
         for i, (c, actions) in enumerate(zip(self.input_cells, self.cell_actions)):
             actions_weight = np.average(actions)
             weights = [(i * self.last_step_size_ms) / self.tau for i in range(len(actions))]
             weights = np.exp(-np.array(weights))[::-1]
             aw = np.sum(weights * actions_weight)
-            self._train(syns=c.syns, action_weight=aw, obs=observation, name=f"inp{i}",
-                        reward=reward)
+            self._train(syns=c.syns, action_weight=aw, name=f"inp{i}",
+                        reward=reward, alpha=self.alpha)
 
-    def _train(self, syns, obs, name, reward, action_weight=None):
+    def _train(self, syns, name, reward, alpha, action_weight=None):
         # negative reward cause weight to rise
         reward = -reward
-        for i, (s, o) in enumerate(zip(syns, obs.flatten())):
+        for i, s in enumerate(syns):
             weight = s.netcons[0].get_weight()
             # weight_func remove last 2 derivative where ball is out of observation which lower
             # voltage for the cell and tricks derivative
             soma_v_dir_g = self.derivatives.get_der(y_name=f'{name}_v', x_name=f"{name}_g{i}",
                                                     dur=self.last_step_size_ms,
                                                     weight_func=lambda ders: ders)
-            new_weight = reward * soma_v_dir_g * self.alpha
+            new_weight = reward * soma_v_dir_g * alpha
             if action_weight is not None:
                 new_weight *= action_weight
             if new_weight != 0:
                 weight -= new_weight
-            s.netcons[0].set_weight(weight)
+                s.netcons[0].set_weight(weight)
 
     def _make_observation(self, observation, poisson=False, stepsize=None):
         """

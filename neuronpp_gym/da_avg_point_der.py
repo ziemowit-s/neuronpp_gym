@@ -33,8 +33,8 @@ if __name__ == '__main__':
     input_shape = obs.shape
     print('input shape', input_shape)
 
-    agent = Agent2DDaExternal(input_max_hz=100, default_stepsize=AGENT_STEPSIZE, tau=100,
-                              alpha=0.0005, der_avg_num=30)
+    agent = Agent2DDaExternal(input_max_hz=100, default_stepsize=AGENT_STEPSIZE, tau=500,
+                              alpha=0.000005, der_avg_num=30)
     agent.build(input_shape=input_shape,
                 x_kernel=Kernel(size=3, padding=0, stride=3),  # 18
                 y_kernel=Kernel(size=4, padding=0, stride=4))  # 24
@@ -90,7 +90,7 @@ if __name__ == '__main__':
         if reward != 0:
             print('reward:', reward, 'avg_reward:', round(np.average(rewards),2),
                   'move_vals', move_vals)
-            agent.reward_step(reward=reward, stepsize=10)
+            agent.reward_step(reward=reward)
 
         # make visuatization of mV on each cells by layers
         # agent.rec_input.plot(animate=True, position=(6, 6))
