@@ -1,9 +1,46 @@
 import numpy as np
 
+from neuronpp.cells.cell import Cell
 from neuronpp.cells.ebner2019_ach_da_cell import Ebner2019AChDACell
 from neuronpp.cells.ebner2019_cell import Ebner2019Cell
 from neuronpp.core.distributions import UniformTruncatedDist
 from neuronpp.core.populations.population import Population
+
+
+def make_hh_network(input_size, input_cell_num):
+    def hh_cell():
+        cell = Cell(name="cell")
+        soma = cell.add_sec("soma", diam=20, l=20, nseg=10)
+        cell.add_sec("apic", diam=2, l=50, nseg=100)
+        cell.insert("hh")
+        cell.connect_secs(child="apic", parent="soma", child_loc=0, parent_loc=1)
+        cell.make_spike_detector(soma(0.5))
+        return cell
+
+    def rl_cell(input_size):
+        cell = Cell(name="cell")
+        soma = cell.add_sec("soma", diam=20, l=20, nseg=10)
+        cell.insert("hh")
+        cell.make_spike_detector(soma(0.5))
+        syns = []
+        for i in range(input_size):
+            syn = cell.add_synapse(source=None, mod_name="ExpSyn", seg=soma(0.5),
+                                   netcon_weight=UniformTruncatedDist(low=0.0001, high=0.0002), e=0, tau=1)
+            syns.append(syn)
+        return cell, syns
+
+    input_syn_per_cell = int(np.ceil(input_size / input_cell_num))
+    inp = Population(name="input")
+    inp.add_cells(num=input_cell_num, cell_function=hh_cell)
+    con = inp.connect(rule="one", syn_num_per_cell_source=input_syn_per_cell)
+    con.set_source(None)
+    con.set_target(inp.cells[0].filter_secs("apic", as_list=True))
+    con.add_synapse("ExpSyn").add_netcon(weight=UniformTruncatedDist(low=0.0001, high=0.0002))
+    con.build()
+
+    reward_cell, reward_input_syns = rl_cell(input_size)
+    punish_cell, punish_input_syns = rl_cell(input_size)
+    return inp, reward_cell, punish_cell, reward_input_syns, punish_input_syns
 
 
 def make_ebner_network(input_size, input_cell_num):
@@ -34,7 +71,7 @@ def make_ebner_network(input_size, input_cell_num):
     con.set_target(inp.cells)
     con.add_synapse("Syn4P").add_netcon(weight=UniformTruncatedDist(low=0.01, high=0.1))
     con.build()
-    
+
     hid = Population(name="hid")
     hid.add_cells(num=4, cell_function=cell_ebner_ach_da)
     con = hid.connect(syn_num_per_cell_source=1, cell_connection_proba=0.5)
@@ -49,7 +86,7 @@ def make_ebner_network(input_size, input_cell_num):
     con.build()
     reward = [s['SynACh'][0] for s in hid.syns]
     punish = [s['SynDa'][0] for s in hid.syns]
-    
+
     out = Population(name="output")
     out.add_cells(num=2, cell_function=cell_ebner_ach_da)
     con = out.connect(syn_num_per_cell_source=1, cell_connection_proba=1)
